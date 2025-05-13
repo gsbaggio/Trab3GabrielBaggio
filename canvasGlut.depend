@@ -29,7 +29,7 @@
 1632060794 c:\users\samsung\desktop\cg\demos\include\gl\freeglut_ext.h
 	<stdarg.h>
 
-1747159157 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\vector2.h
+1747164545 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\vector2.h
 	<cmath>
 	<cstdio>
 
@@ -42,7 +42,7 @@
 1193164156 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\relogio.h
 	"gl_canvas2d.h"
 
-1747158845 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\main.cpp
+1747163276 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\main.cpp
 	<GL/glut.h>
 	<GL/freeglut_ext.h>
 	<math.h>
@@ -63,14 +63,22 @@
 	"gl_canvas2d.h"
 	<cmath>
 
-1747158846 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\bsplinetrack.h
+1747164380 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\bsplinetrack.h
 	<vector>
 	"Vector2.h"
 	"gl_canvas2d.h"
 	<cmath>
 	<algorithm>
+	<cstdio>
+	<string>
+	<cfloat>
 
-1747159679 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\bsplinetrack.cpp
+1747164492 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\bsplinetrack.cpp
 	"BSplineTrack.h"
-	<stdexcept>
+	<vector>
+	<cmath>
+	<algorithm>
+	<cstdio>
+	<string>
+	<cfloat>
 

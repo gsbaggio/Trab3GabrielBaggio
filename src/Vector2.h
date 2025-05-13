@@ -41,6 +41,12 @@ public:
        return std::sqrt(x * x + y * y);
    }
 
+   // Calculates the squared length (squared magnitude) of the vector
+   float lengthSq() const
+   {
+       return x * x + y * y;
+   }
+
    // Returns a new normalized version of this vector
    Vector2 normalized() const
    {

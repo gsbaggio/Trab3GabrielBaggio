@@ -173,16 +173,19 @@ void keyboard(int key)
           g_editorMode = !g_editorMode;
           if (!g_editorMode) {
               // Reset/reinitialize game state if needed when exiting editor
-              // For now, just deselect points
               if(g_track) g_track->deselectControlPoint();
-              // Potentially reset tank position to start of track etc.
-              // g_tanque->ResetPosition(g_track->getPointOnCurve(0.0f));
           } else {
-              // Game is paused, ensure tank movement keys are off
               keyA_down = false;
               keyD_down = false;
           }
           printf("Editor mode: %s\n", g_editorMode ? "ON" : "OFF");
+          break;
+
+      case 's': // Switch active curve for editing
+      case 'S':
+          if (g_editorMode && g_track) {
+              g_track->switchActiveEditingCurve();
+          }
           break;
 
       case '+': // Add control point in editor mode
@@ -193,11 +196,8 @@ void keyboard(int key)
           break;
       case '-': // Remove control point in editor mode
           if (g_editorMode && g_track) {
-              if (g_track->selectedPointIndex != -1) {
-                  g_track->removeControlPoint(g_track->selectedPointIndex);
-              } else {
-                  g_track->removeControlPoint(); // Remove last if none selected
-              }
+              // removeControlPoint now works on the active curve's selection or its last point
+              g_track->removeControlPoint(); 
           }
           break;
 
@@ -281,15 +281,9 @@ void passiveMotion(int x, int y)
 int main(void)
 {
    g_tanque = new Tanque(screenWidth / 4.0f, screenHeight / 2.0f, 50.0f, 1.8f); // Adjusted initial params
-   g_track = new BSplineTrack(80.0f, true); // Track width 80, is a loop
-   // Example: Add some initial control points for the track
-   // g_track->addControlPoint(Vector2(200, 200));
-   // g_track->addControlPoint(Vector2(1000, 200));
-   // g_track->addControlPoint(Vector2(1000, 500));
-   // g_track->addControlPoint(Vector2(200, 500));
-   // These are now added by default in BSplineTrack constructor if empty and loop=true
+   g_track = new BSplineTrack(true); // Track is a loop, trackWidth removed
 
-   CV::init(&screenWidth, &screenHeight, "Tanque B-Spline - Editor: E, Add/Remove: +/- ");
+   CV::init(&screenWidth, &screenHeight, "Tanque B-Spline - Editor: E, Switch: S, Add/Remove: +/-");
    glutMotionFunc(motion); // Register mouse drag callback
    glutPassiveMotionFunc(passiveMotion); // Register mouse move callback
    CV::run();

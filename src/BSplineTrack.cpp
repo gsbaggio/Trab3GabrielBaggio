@@ -1,54 +1,89 @@
 #include "BSplineTrack.h"
-#include <stdexcept> // For std::runtime_error
+#include <vector>
+#include <cmath>       // For floor
+#include <algorithm>   // For std::max, std::min
+#include <cstdio>      // For sprintf
+#include <string>      // For std::string, std::to_string in Render text
+#include <cfloat>      // For FLT_MAX
 
 // Constructor
-BSplineTrack::BSplineTrack(float width, bool isLoop) 
-    : trackWidth(width), degree(3), selectedPointIndex(-1), loop(isLoop) {
-    // Add some default control points to form a basic loop if empty
-    // These should be within typical screen coordinates (e.g., 1280x720)
-    if (controlPoints.empty() && loop) {
-        controlPoints.push_back(Vector2(200, 200));
-        controlPoints.push_back(Vector2(1080, 200));
-        controlPoints.push_back(Vector2(1080, 520));
-        controlPoints.push_back(Vector2(200, 520));
+BSplineTrack::BSplineTrack(bool isLoop)
+    : degree(3), selectedPointIndex(-1), loop(isLoop), activeEditingCurve(CurveSide::Left), selectedCurve(CurveSide::None) {
+    // Add some default control points to form a basic loop
+    if (loop) {
+        // Initial left curve (e.g., inner part of a rectangular track, clockwise)
+        controlPointsLeft.push_back(Vector2(200, 200));  
+        controlPointsLeft.push_back(Vector2(1080, 200));
+        controlPointsLeft.push_back(Vector2(1080, 420)); 
+        controlPointsLeft.push_back(Vector2(200, 420)); 
+
+        // Initial right curve (e.g., outer part of a rectangular track, clockwise)
+        controlPointsRight.push_back(Vector2(150, 150));   
+        controlPointsRight.push_back(Vector2(1130, 150));  
+        controlPointsRight.push_back(Vector2(1130, 470)); 
+        controlPointsRight.push_back(Vector2(150, 470)); 
     }
 }
 
-// Add a control point
-void BSplineTrack::addControlPoint(const Vector2& p, int index) {
-    if (controlPoints.size() >= MAX_CONTROL_POINTS) return;
-    if (index < -1 || index > (int)controlPoints.size()) index = -1; //sanitize index
+void BSplineTrack::switchActiveEditingCurve() {
+    activeEditingCurve = (activeEditingCurve == CurveSide::Left) ? CurveSide::Right : CurveSide::Left;
+    deselectControlPoint(); // Deselect to avoid confusion when switching active curve
+    printf("Active editing curve switched to: %s\n", (activeEditingCurve == CurveSide::Left ? "LEFT" : "RIGHT"));
+}
 
-    if (index == -1 || index == (int)controlPoints.size()) {
-        controlPoints.push_back(p);
+// Add a control point to the active curve
+void BSplineTrack::addControlPoint(const Vector2& p, int index /*= -1*/) {
+    std::vector<Vector2>& points = (activeEditingCurve == CurveSide::Left) ? controlPointsLeft : controlPointsRight;
+    if (points.size() >= MAX_CONTROL_POINTS) return;
+
+    // Sanitize index: if out of bounds or -1, prepare to add to end.
+    if (index < 0 || index > (int)points.size()) {
+        index = points.size(); 
+    }
+
+    if (index == (int)points.size()) {
+        points.push_back(p);
     } else {
-        controlPoints.insert(controlPoints.begin() + index, p);
+        points.insert(points.begin() + index, p);
     }
 }
 
 // Remove a control point
-bool BSplineTrack::removeControlPoint(int index) {
-    if (controlPoints.size() <= MIN_CONTROL_POINTS) return false;
+bool BSplineTrack::removeControlPoint(int index /*= -1*/) {
+    std::vector<Vector2>& points = (activeEditingCurve == CurveSide::Left) ? controlPointsLeft : controlPointsRight;
 
-    if (index != -1 && (index < 0 || index >= (int)controlPoints.size())) {
-        return false; // Invalid index
-    }
+    if (points.size() <= MIN_CONTROL_POINTS_PER_CURVE) return false;
 
     int removalIdx = -1;
-    if (index != -1) {
-        removalIdx = index;
-    } else if (selectedPointIndex != -1) {
-        removalIdx = selectedPointIndex;
-    } else if (!controlPoints.empty()){
-        removalIdx = controlPoints.size() - 1; // Remove last if no specific index and none selected
+
+    if (index != -1) { // Specific index provided for the active curve
+        if (index >= 0 && index < (int)points.size()) {
+            removalIdx = index;
+        } else {
+            return false; // Invalid explicit index for active curve
+        }
+    } else { // No specific index, use selection on active curve or last point of active curve
+        if (selectedPointIndex != -1 && selectedCurve == activeEditingCurve) {
+            // A point is selected, and it's on the currently active curve
+            removalIdx = selectedPointIndex;
+        } else if (!points.empty()) {
+            // No selection on active curve, or no selection at all; remove last point of active curve
+            removalIdx = points.size() - 1;
+        } else {
+            return false; // No points in active curve to remove
+        }
     }
 
-    if (removalIdx != -1) {
-        controlPoints.erase(controlPoints.begin() + removalIdx);
-        if (selectedPointIndex == removalIdx) {
-            deselectControlPoint();
-        } else if (selectedPointIndex > removalIdx && selectedPointIndex > 0) {
-            selectedPointIndex--; // Adjust selection if it was after the removed point
+    if (removalIdx >= 0 && removalIdx < (int)points.size()) {
+        points.erase(points.begin() + removalIdx);
+
+        // Adjust selection if the removed point was the selected one on the active curve
+        if (selectedCurve == activeEditingCurve) {
+            if (selectedPointIndex == removalIdx) {
+                deselectControlPoint();
+            } else if (selectedPointIndex > removalIdx && selectedPointIndex > 0) { // Check selectedPointIndex > 0 before decrementing
+                selectedPointIndex--; // Adjust index if selection was after the removed point
+            }
         }
         return true;
     }
@@ -57,63 +92,75 @@ bool BSplineTrack::removeControlPoint(int index) {
 
 // Select a control point if mouse click is near one
 bool BSplineTrack::selectControlPoint(float mx, float my) {
-    for (size_t i = 0; i < controlPoints.size(); ++i) {
-        if (controlPoints[i].distSq(Vector2(mx, my)) < CONTROL_POINT_SELECT_RADIUS_SQ) {
+    deselectControlPoint(); // Clear previous selection first
+
+    // Check left curve
+    for (size_t i = 0; i < controlPointsLeft.size(); ++i) {
+        if (controlPointsLeft[i].distSq(Vector2(mx, my)) < CONTROL_POINT_SELECT_RADIUS_SQ) {
             selectedPointIndex = i;
+            selectedCurve = CurveSide::Left;
             return true;
         }
     }
-    selectedPointIndex = -1;
+    // Check right curve
+    for (size_t i = 0; i < controlPointsRight.size(); ++i) {
+        if (controlPointsRight[i].distSq(Vector2(mx, my)) < CONTROL_POINT_SELECT_RADIUS_SQ) {
+            selectedPointIndex = i;
+            selectedCurve = CurveSide::Right;
+            return true;
+        }
+    }
     return false;
 }
 
 // Move the selected control point
 void BSplineTrack::moveSelectedControlPoint(float mx, float my) {
-    if (selectedPointIndex >= 0 && selectedPointIndex < (int)controlPoints.size()) {
-        controlPoints[selectedPointIndex].set(mx, my);
+    if (selectedPointIndex == -1 || selectedCurve == CurveSide::None) return;
+
+    if (selectedCurve == CurveSide::Left && selectedPointIndex >= 0 && selectedPointIndex < (int)controlPointsLeft.size()) {
+        controlPointsLeft[selectedPointIndex].set(mx, my);
+    } else if (selectedCurve == CurveSide::Right && selectedPointIndex >=0 && selectedPointIndex < (int)controlPointsRight.size()) {
+        controlPointsRight[selectedPointIndex].set(mx, my);
     }
 }
 
 // Deselect any control point
 void BSplineTrack::deselectControlPoint() {
     selectedPointIndex = -1;
+    selectedCurve = CurveSide::None;
 }
 
 // Calculate a point on a cubic B-Spline segment
 Vector2 BSplineTrack::calculateBSplinePoint(float t, const Vector2& p0, const Vector2& p1, const Vector2& p2, const Vector2& p3) const {
     float t2 = t * t;
     float t3 = t2 * t;
-
     float b0 = (1 - t) * (1 - t) * (1 - t) / 6.0f;
     float b1 = (3 * t3 - 6 * t2 + 4) / 6.0f;
     float b2 = (-3 * t3 + 3 * t2 + 3 * t + 1) / 6.0f;
     float b3 = t3 / 6.0f;
-
     return p0 * b0 + p1 * b1 + p2 * b2 + p3 * b3;
 }
 
 // Calculate tangent on a cubic B-Spline segment (not normalized)
 Vector2 BSplineTrack::calculateBSplineTangent(float t, const Vector2& p0, const Vector2& p1, const Vector2& p2, const Vector2& p3) const {
     float t2 = t * t;
-
-    float b0_prime = -3 * (1 - t) * (1 - t) / 6.0f; // -0.5 * (1-t)^2
-    float b1_prime = (9 * t2 - 12 * t) / 6.0f;     // (1.5 * t^2 - 2*t)
-    float b2_prime = (-9 * t2 + 6 * t + 3) / 6.0f; // (-1.5 * t^2 + t + 0.5)
-    float b3_prime = 3 * t2 / 6.0f;                // 0.5 * t^2
-
+    // Derivatives of basis functions
+    float b0_prime = -0.5f * (1 - t) * (1 - t);
+    float b1_prime = (1.5f * t2 - 2.0f * t);
+    float b2_prime = (-1.5f * t2 + t + 0.5f);
+    float b3_prime = (0.5f * t2);
     return p0 * b0_prime + p1 * b1_prime + p2 * b2_prime + p3 * b3_prime;
 }
 
-
-// Get a point on the curve for a global t (0 to 1)
-Vector2 BSplineTrack::getPointOnCurve(float t_global) const {
-    if (controlPoints.size() < MIN_CONTROL_POINTS) {
-        return Vector2(0,0); // Or throw error, or return a default
+// Internal helper to get a point on a specific list of control points for a global t (0 to 1)
+Vector2 BSplineTrack::getPointOnCurveInternal(float t_global, const std::vector<Vector2>& points_list) const {
+    if (points_list.size() < MIN_CONTROL_POINTS_PER_CURVE) {
+        return points_list.empty() ? Vector2(0,0) : points_list.front(); // Fallback
     }
 
-    int num_control_points = controlPoints.size();
+    int num_control_points = points_list.size();
     int num_segments = loop ? num_control_points : num_control_points - degree;
-    if (num_segments <= 0) return Vector2(0,0);
+    if (num_segments <= 0) return points_list.front(); // Fallback
 
     float t = t_global * num_segments;
     int segment_idx = static_cast<int>(floor(t));
@@ -122,28 +169,25 @@ Vector2 BSplineTrack::getPointOnCurve(float t_global) const {
 
     Vector2 p0, p1, p2, p3;
     if (loop) {
-        p0 = controlPoints[segment_idx % num_control_points];
-        p1 = controlPoints[(segment_idx + 1) % num_control_points];
-        p2 = controlPoints[(segment_idx + 2) % num_control_points];
-        p3 = controlPoints[(segment_idx + 3) % num_control_points];
+        p0 = points_list[segment_idx % num_control_points];
+        p1 = points_list[(segment_idx + 1) % num_control_points];
+        p2 = points_list[(segment_idx + 2) % num_control_points];
+        p3 = points_list[(segment_idx + 3) % num_control_points];
     } else {
-        // For open B-spline, ensure indices are valid
-        // This example focuses on loop, open needs more careful indexing for ends
-        // For simplicity, we assume loop or enough points for non-loop to behave like loop segments
-        p0 = controlPoints[segment_idx];
-        p1 = controlPoints[segment_idx + 1];
-        p2 = controlPoints[segment_idx + 2];
-        p3 = controlPoints[segment_idx + 3];
+        p0 = points_list[segment_idx];
+        p1 = points_list[segment_idx + 1];
+        p2 = points_list[segment_idx + 2];
+        p3 = points_list[segment_idx + 3];
     }
     return calculateBSplinePoint(t_local, p0, p1, p2, p3);
 }
 
-// Get tangent on the curve for a global t (0 to 1)
-Vector2 BSplineTrack::getTangentOnCurve(float t_global) const {
-     if (controlPoints.size() < MIN_CONTROL_POINTS) {
+// Internal helper to get tangent on a specific list of control points for a global t (0 to 1)
+Vector2 BSplineTrack::getTangentOnCurveInternal(float t_global, const std::vector<Vector2>& points_list) const {
+    if (points_list.size() < MIN_CONTROL_POINTS_PER_CURVE) {
         return Vector2(1,0); // Default tangent
     }
-    int num_control_points = controlPoints.size();
+    int num_control_points = points_list.size();
     int num_segments = loop ? num_control_points : num_control_points - degree;
     if (num_segments <= 0) return Vector2(1,0);
 
@@ -154,115 +198,229 @@ Vector2 BSplineTrack::getTangentOnCurve(float t_global) const {
 
     Vector2 p0, p1, p2, p3;
     if (loop) {
-        p0 = controlPoints[segment_idx % num_control_points];
-        p1 = controlPoints[(segment_idx + 1) % num_control_points];
-        p2 = controlPoints[(segment_idx + 2) % num_control_points];
-        p3 = controlPoints[(segment_idx + 3) % num_control_points];
+        p0 = points_list[segment_idx % num_control_points];
+        p1 = points_list[(segment_idx + 1) % num_control_points];
+        p2 = points_list[(segment_idx + 2) % num_control_points];
+        p3 = points_list[(segment_idx + 3) % num_control_points];
     } else {
-        p0 = controlPoints[segment_idx];
-        p1 = controlPoints[segment_idx + 1];
-        p2 = controlPoints[segment_idx + 2];
-        p3 = controlPoints[segment_idx + 3];
+        p0 = points_list[segment_idx];
+        p1 = points_list[segment_idx + 1];
+        p2 = points_list[segment_idx + 2];
+        p3 = points_list[segment_idx + 3];
     }
     return calculateBSplineTangent(t_local, p0, p1, p2, p3);
 }
 
-// Render the track
-void BSplineTrack::Render(bool editorMode) {
-    if (controlPoints.size() < MIN_CONTROL_POINTS) return;
 
-    int num_render_segments = loop ? controlPoints.size() : controlPoints.size() - degree;
+// Public interface to get point on a curve
+Vector2 BSplineTrack::getPointOnCurve(float t_global, CurveSide side) const {
+    if (side == CurveSide::Left) {
+        return getPointOnCurveInternal(t_global, controlPointsLeft);
+    } else if (side == CurveSide::Right) {
+        return getPointOnCurveInternal(t_global, controlPointsRight);
+    }
+    return Vector2(0,0); // Should not happen if side is valid
+}
+
+// Public interface to get tangent on a curve
+Vector2 BSplineTrack::getTangentOnCurve(float t_global, CurveSide side) const {
+     if (side == CurveSide::Left) {
+        return getTangentOnCurveInternal(t_global, controlPointsLeft);
+    } else if (side == CurveSide::Right) {
+        return getTangentOnCurveInternal(t_global, controlPointsRight);
+    }
+    return Vector2(1,0); // Should not happen
+}
+
+// Helper to render a single B-Spline curve
+void BSplineTrack::renderCurve(const std::vector<Vector2>& points, float r, float g, float b) const {
+    if (points.size() < MIN_CONTROL_POINTS_PER_CURVE) return;
+
+    int num_control_points = points.size();
+    int num_render_segments = loop ? num_control_points : num_control_points - degree;
     if (num_render_segments <= 0) return;
 
-    const int steps_per_segment = 20; // Number of small lines to draw per B-Spline segment
+    const int steps_per_segment = 20; // Density of line segments for drawing the curve
+    Vector2 last_pt;
 
-    Vector2 last_left_pt, last_right_pt, last_center_pt;
-
-    for (int i = 0; i < num_render_segments; ++i) {
+    for (int i = 0; i < num_render_segments; ++i) { // Iterate through each B-Spline segment
         Vector2 cp0, cp1, cp2, cp3;
         if (loop) {
-            cp0 = controlPoints[i % controlPoints.size()];
-            cp1 = controlPoints[(i + 1) % controlPoints.size()];
-            cp2 = controlPoints[(i + 2) % controlPoints.size()];
-            cp3 = controlPoints[(i + 3) % controlPoints.size()];
+            cp0 = points[i % num_control_points];
+            cp1 = points[(i + 1) % num_control_points];
+            cp2 = points[(i + 2) % num_control_points];
+            cp3 = points[(i + 3) % num_control_points];
         } else {
-            // This simplified version for open loop might not look good at ends
-            // A full open B-spline requires knot vector manipulation for C2 at ends
-            if (i + degree >= controlPoints.size()) continue;
-            cp0 = controlPoints[i];
-            cp1 = controlPoints[i+1];
-            cp2 = controlPoints[i+2];
-            cp3 = controlPoints[i+3];
+            cp0 = points[i]; cp1 = points[i+1]; cp2 = points[i+2]; cp3 = points[i+3];
         }
 
-        for (int j = 0; j <= steps_per_segment; ++j) {
-            float t_local = static_cast<float>(j) / steps_per_segment;
-            Vector2 current_center_pt = calculateBSplinePoint(t_local, cp0, cp1, cp2, cp3);
-            Vector2 tangent = calculateBSplineTangent(t_local, cp0, cp1, cp2, cp3);
-            
-            if (tangent.length() < 0.001f) { // Avoid division by zero if tangent is zero
-                if (j > 0) tangent = (current_center_pt - last_center_pt).normalized();
-                else tangent = Vector2(1,0); // Default if first point and no tangent
-            } else {
-                tangent.normalize();
-            }
-            
-            Vector2 normal(-tangent.y, tangent.x); // Perpendicular to the tangent
+        for (int j = 0; j <= steps_per_segment; ++j) { // Iterate t_local from 0 to 1 for this segment
+            float t_local_in_segment = static_cast<float>(j) / steps_per_segment;
+            Vector2 current_pt = calculateBSplinePoint(t_local_in_segment, cp0, cp1, cp2, cp3);
 
-            Vector2 current_left_pt = current_center_pt + normal * (trackWidth / 2.0f);
-            Vector2 current_right_pt = current_center_pt - normal * (trackWidth / 2.0f);
-
-            if (j > 0 || i > 0) { // For all but the very first point of the entire track
-                CV::color(0.3f, 0.3f, 0.3f); // Track color (dark grey)
-                CV::line(last_left_pt.x, last_left_pt.y, current_left_pt.x, current_left_pt.y);
-                CV::line(last_right_pt.x, last_right_pt.y, current_right_pt.x, current_right_pt.y);
-                // Optional: draw centerline for debugging
-                // CV::color(1,1,0); CV::line(last_center_pt.x, last_center_pt.y, current_center_pt.x, current_center_pt.y);
+            if (j > 0 || i > 0) { // Draw line if not the very first point calculated
+                CV::color(r, g, b);
+                CV::line(last_pt.x, last_pt.y, current_pt.x, current_pt.y);
             }
-            last_left_pt = current_left_pt;
-            last_right_pt = current_right_pt;
-            last_center_pt = current_center_pt;
+            last_pt = current_pt;
         }
     }
     
-    // If loop and enough points, close the final segment to the first
-    if (loop && num_render_segments > 0 && steps_per_segment > 0) {
-        // Calculate the very first point of the track again to close the loop
-        Vector2 first_cp0 = controlPoints[0];
-        Vector2 first_cp1 = controlPoints[1 % controlPoints.size()];
-        Vector2 first_cp2 = controlPoints[2 % controlPoints.size()];
-        Vector2 first_cp3 = controlPoints[3 % controlPoints.size()];
-        Vector2 first_center_pt = calculateBSplinePoint(0.0f, first_cp0, first_cp1, first_cp2, first_cp3);
-        Vector2 first_tangent = calculateBSplineTangent(0.0f, first_cp0, first_cp1, first_cp2, first_cp3).normalized();
-        if (first_tangent.length() < 0.001f) first_tangent = Vector2(1,0);
-        Vector2 first_normal(-first_tangent.y, first_tangent.x);
-        Vector2 first_left_pt = first_center_pt + first_normal * (trackWidth / 2.0f);
-        Vector2 first_right_pt = first_center_pt - first_normal * (trackWidth / 2.0f);
+    if (loop && points.size() >= MIN_CONTROL_POINTS_PER_CURVE) {
+         Vector2 first_point_of_curve = getPointOnCurveInternal(0.0f, points);
+         CV::color(r, g, b);
+         CV::line(last_pt.x, last_pt.y, first_point_of_curve.x, first_point_of_curve.y);
+    }
+}
 
-        CV::color(0.3f, 0.3f, 0.3f);
-        CV::line(last_left_pt.x, last_left_pt.y, first_left_pt.x, first_left_pt.y);
-        CV::line(last_right_pt.x, last_right_pt.y, first_right_pt.x, first_right_pt.y);
-        // CV::line(last_center_pt.x, last_center_pt.y, first_center_pt.x, first_center_pt.y); // Close centerline
+// Render the track
+void BSplineTrack::Render(bool editorMode) {
+    // Render left curve (e.g., green boundary)
+    renderCurve(controlPointsLeft, 0.1f, 0.4f, 0.1f); // Darker green for the line itself
+    // Render right curve (e.g., red boundary)
+    renderCurve(controlPointsRight, 0.4f, 0.1f, 0.1f); // Darker red for the line itself
+
+    // Draw "fill" lines between the two curves to represent the track surface
+    if (controlPointsLeft.size() >= MIN_CONTROL_POINTS_PER_CURVE && controlPointsRight.size() >= MIN_CONTROL_POINTS_PER_CURVE) {
+        CV::color(0.3f, 0.3f, 0.3f); // Color for track surface lines (grey)
+        const int fill_steps = 50; // Number of connecting lines
+        for (int i = 0; i <= fill_steps; ++i) {
+            float t_global = static_cast<float>(i) / fill_steps;
+            Vector2 pt_left = getPointOnCurve(t_global, CurveSide::Left);
+            Vector2 pt_right = getPointOnCurve(t_global, CurveSide::Right);
+            CV::line(pt_left.x, pt_left.y, pt_right.x, pt_right.y);
+        }
     }
 
     // Draw control points if in editor mode
     if (editorMode) {
-        for (size_t i = 0; i < controlPoints.size(); ++i) {
-            if (i == selectedPointIndex) {
-                CV::color(1, 0, 0); // Selected point color (red)
-            } else {
-                CV::color(0, 1, 0); // Default control point color (green)
-            }
-            CV::circleFill(controlPoints[i].x, controlPoints[i].y, CONTROL_POINT_DRAW_RADIUS, 10);
+        char pointLabel[10];
 
-            // Draw the control point number
-            char pointNumberStr[4]; // Buffer for string conversion, max 999 points
-            sprintf(pointNumberStr, "%zu", i);
-            CV::color(1, 1, 1); // White color for text
-            // Offset the text slightly from the control point circle
-            CV::text(controlPoints[i].x + CONTROL_POINT_DRAW_RADIUS + 2, controlPoints[i].y + CONTROL_POINT_DRAW_RADIUS + 2, pointNumberStr);
+        // Draw Left Control Points
+        for (size_t i = 0; i < controlPointsLeft.size(); ++i) {
+            bool isSelected = (selectedPointIndex == static_cast<int>(i) && selectedCurve == CurveSide::Left);
+            bool isActiveEditing = (activeEditingCurve == CurveSide::Left);
+
+            if (isSelected) CV::color(1.0f, 0.65f, 0.0f); // Orange for selected
+            else if (isActiveEditing) CV::color(0.0f, 1.0f, 0.0f); // Bright Green for active editing curve
+            else CV::color(0.0f, 0.5f, 0.0f); // Darker Green for inactive
+            
+            CV::circleFill(controlPointsLeft[i].x, controlPointsLeft[i].y, CONTROL_POINT_DRAW_RADIUS, 10);
+            sprintf(pointLabel, "L%zu", i);
+            CV::color(1,1,1); // White text
+            CV::text(controlPointsLeft[i].x + CONTROL_POINT_DRAW_RADIUS + 3, controlPointsLeft[i].y - CONTROL_POINT_DRAW_RADIUS - 12, pointLabel);
         }
+
+        // Draw Right Control Points
+        for (size_t i = 0; i < controlPointsRight.size(); ++i) {
+            bool isSelected = (selectedPointIndex == static_cast<int>(i) && selectedCurve == CurveSide::Right);
+            bool isActiveEditing = (activeEditingCurve == CurveSide::Right);
+
+            if (isSelected) CV::color(1.0f, 0.65f, 0.0f); // Orange for selected
+            else if (isActiveEditing) CV::color(1.0f, 0.0f, 0.0f); // Bright Red for active editing curve
+            else CV::color(0.5f, 0.0f, 0.0f); // Darker Red for inactive
+
+            CV::circleFill(controlPointsRight[i].x, controlPointsRight[i].y, CONTROL_POINT_DRAW_RADIUS, 10);
+            sprintf(pointLabel, "R%zu", i);
+            CV::color(1,1,1); // White text
+            CV::text(controlPointsRight[i].x + CONTROL_POINT_DRAW_RADIUS + 3, controlPointsRight[i].y - CONTROL_POINT_DRAW_RADIUS - 12, pointLabel);
+        }
+        
+        // Editor mode help text
         CV::color(1,1,1);
-        CV::text(10, 30, "EDITOR MODE: Click to select/drag points. +/- to add/remove.");
+        std::string activeCurveStr = (activeEditingCurve == CurveSide::Left) ? "LEFT (Green)" : "RIGHT (Red)";
+        std::string selectedInfoStr = "None";
+        if (selectedCurve != CurveSide::None && selectedPointIndex != -1) {
+            selectedInfoStr = (selectedCurve == CurveSide::Left ? "L" : "R") + std::to_string(selectedPointIndex);
+        }
+        
+        char editorHelpTextLine1[200];
+        char editorHelpTextLine2[200];
+        sprintf(editorHelpTextLine1, "EDITOR MODE | Active: %s (S to switch) | Selected: %s", 
+                activeCurveStr.c_str(), selectedInfoStr.c_str());
+        sprintf(editorHelpTextLine2, "Click to select/drag. +/- to add/remove on active curve.");
+        CV::text(10, 20, editorHelpTextLine1);
+        CV::text(10, 40, editorHelpTextLine2);
     }
+}
+
+// Find the closest point on the specified curve to a query point
+ClosestPointInfo BSplineTrack::findClosestPointOnCurve(const Vector2& queryPoint, CurveSide side) const {
+    ClosestPointInfo closestInfo;
+
+    const std::vector<Vector2>* points_list_ptr = nullptr;
+    if (side == CurveSide::Left) {
+        points_list_ptr = &controlPointsLeft;
+    } else if (side == CurveSide::Right) {
+        points_list_ptr = &controlPointsRight;
+    } else {
+        return closestInfo; 
+    }
+
+    const std::vector<Vector2>& points_list = *points_list_ptr;
+
+    if (points_list.size() < static_cast<size_t>(MIN_CONTROL_POINTS_PER_CURVE)) {
+        if (!points_list.empty()) {
+            for (size_t i = 0; i < points_list.size(); ++i) {
+                float distSq = queryPoint.distSq(points_list[i]);
+                if (distSq < closestInfo.distance * closestInfo.distance) { 
+                    closestInfo.distance = std::sqrt(distSq);
+                    closestInfo.point = points_list[i];
+                    closestInfo.t_global = -1.0f; 
+                    closestInfo.segmentIndex = -1; 
+                    closestInfo.isValid = true; 
+                }
+            }
+        }
+        return closestInfo; 
+    }
+
+    const int NUM_SAMPLES_FOR_CLOSEST_POINT = 200; 
+
+    int num_control_points = static_cast<int>(points_list.size());
+    int num_segments = loop ? num_control_points : num_control_points - degree;
+    if (num_segments <= 0) { 
+        if (!points_list.empty()) { 
+             closestInfo.point = points_list.front();
+             closestInfo.distance = std::sqrt(queryPoint.distSq(points_list.front()));
+             closestInfo.t_global = 0.0f;
+             closestInfo.segmentIndex = 0;
+             closestInfo.isValid = true;
+        }
+        return closestInfo;
+    }
+
+    for (int i = 0; i <= NUM_SAMPLES_FOR_CLOSEST_POINT; ++i) {
+        float t_global_sample = static_cast<float>(i) / NUM_SAMPLES_FOR_CLOSEST_POINT;
+        Vector2 current_curve_point = getPointOnCurveInternal(t_global_sample, points_list);
+        float dist_sq_current = queryPoint.distSq(current_curve_point);
+
+        if (dist_sq_current < closestInfo.distance * closestInfo.distance) {
+            closestInfo.distance = std::sqrt(dist_sq_current);
+            closestInfo.point = current_curve_point;
+            closestInfo.t_global = t_global_sample;
+            closestInfo.isValid = true;
+
+            float t_scaled_for_segment = t_global_sample * num_segments;
+            int segment_idx;
+            if (t_global_sample >= 1.0f) { 
+                 segment_idx = num_segments - 1; 
+            } else {
+                 segment_idx = static_cast<int>(floor(t_scaled_for_segment));
+            }
+            closestInfo.segmentIndex = std::max(0, std::min(segment_idx, num_segments - 1));
+        }
+    }
+    
+    if (closestInfo.isValid) {
+        Vector2 tangent = getTangentOnCurveInternal(closestInfo.t_global, points_list);
+        if (tangent.lengthSq() > 1e-6) { // Avoid normalizing zero vector
+            tangent.normalize();
+            closestInfo.normal = Vector2(-tangent.y, tangent.x); 
+        } else {
+            // Cannot determine normal if tangent is zero, could set to a default or mark as less reliable
+            closestInfo.normal = Vector2(0,0); // Or some other indicator
+        }
+    }
+    return closestInfo;
 }
