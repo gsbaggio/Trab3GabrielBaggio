@@ -1,0 +1,76 @@
+# depslib dependency file v1.0
+1747159387 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\gl_canvas2d.cpp
+	"gl_canvas2d.h"
+	<GL/glut.h>
+
+1747157735 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\gl_canvas2d.h
+	<stdio.h>
+	<stdlib.h>
+	<math.h>
+	<string.h>
+	<GL/glut.h>
+	<GL/freeglut_ext.h>
+	"Vector2.h"
+
+1632060799 c:\users\samsung\desktop\cg\demos\include\gl\glut.h
+	"freeglut_std.h"
+
+1632060797 c:\users\samsung\desktop\cg\demos\include\gl\freeglut_std.h
+	<windows.h>
+	<EGL/egl.h>
+	<GLES/gl.h>
+	<GLES2/gl2.h>
+	<OpenGL/gl.h>
+	<OpenGL/glu.h>
+	<GL/gl.h>
+	<GL/glu.h>
+	<stdlib.h>
+
+1632060794 c:\users\samsung\desktop\cg\demos\include\gl\freeglut_ext.h
+	<stdarg.h>
+
+1747159157 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\vector2.h
+	<cmath>
+	<cstdio>
+
+1747157921 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\relogio.cpp
+	"Relogio.h"
+	<math.h>
+	<stdio.h>
+	<stdlib.h>
+
+1193164156 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\relogio.h
+	"gl_canvas2d.h"
+
+1747158845 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\main.cpp
+	<GL/glut.h>
+	<GL/freeglut_ext.h>
+	<math.h>
+	<stdio.h>
+	<stdlib.h>
+	"gl_canvas2d.h"
+	"Relogio.h"
+	"Tanque.h"
+	"BSplineTrack.h"
+
+1747157542 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\tanque.h
+	"gl_canvas2d.h"
+	"Vector2.h"
+	<cmath>
+
+1747157775 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\tanque.cpp
+	"Tanque.h"
+	"gl_canvas2d.h"
+	<cmath>
+
+1747158846 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\bsplinetrack.h
+	<vector>
+	"Vector2.h"
+	"gl_canvas2d.h"
+	<cmath>
+	<algorithm>
+
+1747159679 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\bsplinetrack.cpp
+	"BSplineTrack.h"
+	<stdexcept>
+

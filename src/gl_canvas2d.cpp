@@ -236,8 +236,10 @@ void mouseWheelCB(int wheel, int direction, int x, int y)
    ConvertMouseCoord(-2, -2, wheel, direction, x, y);
 }
 
-void motion(int x, int y)
+//funcao chamada quando o mouse eh movido com algum botao pressionado
+static void motion(int x, int y)
 {
+   //printf("motion %d %d\\n", x, y);
    ConvertMouseCoord(-2, -2, -2, -2, x, y);
 }
 
@@ -250,7 +252,6 @@ void ConvertMouseCoord(int button, int state, int wheel, int direction, int x, i
 #endif
    mouse(button, state, wheel, direction, x, y);
 }
-
 
 //funcao chamada sempre que a tela for redimensionada.
 void reshape (int w, int h)

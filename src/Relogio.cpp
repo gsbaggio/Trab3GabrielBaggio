@@ -19,12 +19,10 @@ void Relogio::anima()
    int x = (int)(cos(hora) * 100);
    int y = (int)(sin(hora) * 100);
 
-   CV::translate( Vector2(POS_X, POS_Y) );
 
    CV::circle(0, 0, 110, 15);
    CV::line(0, 0, x, y);
    hora += 0.001;
 
-   CV::translate(0, 0);
 }
 

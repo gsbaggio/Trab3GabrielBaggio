@@ -9,7 +9,7 @@
 //
 //  Versao 2.1
 //
-//  Instruções:
+//  Instruï¿½ï¿½es:
 //	  Para alterar a animacao, digite numeros entre 1 e 3
 // *********************************************************************/
 
@@ -22,20 +22,33 @@
 
 #include "gl_canvas2d.h"
 
-#include "Bola.h"
 #include "Relogio.h"
-#include "Botao.h"
+#include "Tanque.h" // Include the new Tanque header
+#include "BSplineTrack.h" // Include the BSplineTrack header
 
 //largura e altura inicial da tela . Alteram com o redimensionamento de tela.
-int screenWidth = 500, screenHeight = 500;
+int screenWidth = 1280, screenHeight = 720;
 
+// Old demo objects - can be removed or commented out if Tanque is the primary focus
+// Bola    *b = NULL;
+// Relogio *r = NULL;
+// Botao   *bt = NULL; //se a aplicacao tiver varios botoes, sugiro implementar um manager de botoes.
+// int opcao  = 50;//variavel global para selecao do que sera exibido na canvas.
 
-Bola    *b = NULL;
-Relogio *r = NULL;
-Botao   *bt = NULL; //se a aplicacao tiver varios botoes, sugiro implementar um manager de botoes.
-int opcao  = 50;//variavel global para selecao do que sera exibido na canvas.
+Tanque *g_tanque = NULL; // Global pointer for the tank
+BSplineTrack *g_track = NULL; // Global pointer for the track
+
+bool g_editorMode = false;
+bool g_mousePressed = false;
+
 int mouseX, mouseY; //variaveis globais do mouse para poder exibir dentro da render().
 
+// Flags for tank rotation
+bool keyA_down = false;
+bool keyD_down = false;
+
+// --- Comment out or remove old drawing functions if no longer needed ---
+/*
 void DesenhaSenoide()
 {
    float x=0, y;
@@ -69,6 +82,7 @@ void DesenhaLinhaDegrade()
    }
    CV::translate(0, 0);
 }
+*/
 
 void DrawMouseScreenCoords()
 {
@@ -79,25 +93,43 @@ void DrawMouseScreenCoords()
     CV::text(10,320, str);
 }
 
-
-
-
-
-
-
-
-
 //funcao chamada continuamente. Deve-se controlar o que desenhar por meio de variaveis globais
 //Todos os comandos para desenho na canvas devem ser chamados dentro da render().
-//Deve-se manter essa função com poucas linhas de codigo.
+//Deve-se manter essa funo com poucas linhas de codigo.
 void render()
 {
-   CV::text(20,500,"Programa Demo Canvas2D");
+   // Calculate deltaTime for frame-rate independent movement
+   static float lastTime = 0.0f;
+   float currentTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0f; // Time in seconds
+   float deltaTime = currentTime - lastTime;
+   lastTime = currentTime;
+
+   // Avoid issues if deltaTime is zero (e.g., first frame or very fast calls)
+   if (deltaTime <= 0.0f || deltaTime > 0.2f) { // also cap deltaTime to avoid large jumps
+       deltaTime = 1.0f / 60.0f; // Assume 60 FPS if deltaTime is invalid or too large
+   }
+
+   CV::clear(0.5, 0.5, 0.5); // Clear screen with a background color
+   CV::text(10, screenHeight - 20, "Jogo de Tanque - Use A/D para girar, Mouse para mirar. 'E' para Editor.");
+
+   if (g_track) {
+       g_track->Render(g_editorMode);
+   }
 
    DrawMouseScreenCoords();
 
-   bt->Render();
+   // Update and Render Tank only if not in editor mode
+   if (!g_editorMode && g_tanque) {
+       g_tanque->Update(static_cast<float>(mouseX), static_cast<float>(mouseY), keyA_down, keyD_down, deltaTime);
+       g_tanque->Render();
+   } else if (g_editorMode && g_tanque) {
+        // Optionally render tank statically in editor mode or hide it
+        // g_tanque->Render(); // Render without update
+   }
 
+   // --- Remove or comment out old demo logic ---
+   /*
+   bt->Render();
    DesenhaLinhaDegrade();
 
    if( opcao == 49 ) //'1' -> relogio
@@ -112,35 +144,63 @@ void render()
    {
        DesenhaSenoide();
    }
+   */
 
-
-   Sleep(10); //nao eh controle de FPS. Somente um limitador de FPS.
+   // Sleep(10); // Replaced with deltaTime for FPS control
 }
 
 //funcao chamada toda vez que uma tecla for pressionada.
 void keyboard(int key)
 {
    printf("\nTecla: %d" , key);
-   if( key < 200 )
-   {
-      opcao = key;
-   }
 
    switch(key)
    {
-      case 27:
+      case 27: // ESC
 	     exit(0);
 	  break;
 
-	  //seta para a esquerda
-      case 200:
-         b->move(-10);
-	  break;
+      case 'a':
+      case 'A':
+          if (!g_editorMode) keyA_down = true;
+          break;
+      case 'd':
+      case 'D':
+          if (!g_editorMode) keyD_down = true;
+          break;
+      case 'e':
+      case 'E':
+          g_editorMode = !g_editorMode;
+          if (!g_editorMode) {
+              // Reset/reinitialize game state if needed when exiting editor
+              // For now, just deselect points
+              if(g_track) g_track->deselectControlPoint();
+              // Potentially reset tank position to start of track etc.
+              // g_tanque->ResetPosition(g_track->getPointOnCurve(0.0f));
+          } else {
+              // Game is paused, ensure tank movement keys are off
+              keyA_down = false;
+              keyD_down = false;
+          }
+          printf("Editor mode: %s\n", g_editorMode ? "ON" : "OFF");
+          break;
 
-	  //seta para a direita
-	  case 202:
-         b->move(10);
-	  break;
+      case '+': // Add control point in editor mode
+      case '=': // GLUT often uses '=' for '+' without shift
+          if (g_editorMode && g_track) {
+              g_track->addControlPoint(Vector2(mouseX, mouseY));
+          }
+          break;
+      case '-': // Remove control point in editor mode
+          if (g_editorMode && g_track) {
+              if (g_track->selectedPointIndex != -1) {
+                  g_track->removeControlPoint(g_track->selectedPointIndex);
+              } else {
+                  g_track->removeControlPoint(); // Remove last if none selected
+              }
+          }
+          break;
+
    }
 }
 
@@ -148,6 +208,17 @@ void keyboard(int key)
 void keyboardUp(int key)
 {
    printf("\nLiberou: %d" , key);
+   switch(key)
+   {
+      case 'a':
+      case 'A':
+          keyA_down = false;
+          break;
+      case 'd':
+      case 'D':
+          keyD_down = false;
+          break;
+   }
 }
 
 //funcao para tratamento de mouse: cliques, movimentos e arrastos
@@ -156,23 +227,70 @@ void mouse(int button, int state, int wheel, int direction, int x, int y)
    mouseX = x; //guarda as coordenadas do mouse para exibir dentro da render()
    mouseY = y;
 
-   printf("\nmouse %d %d %d %d %d %d", button, state, wheel, direction,  x, y);
+   // printf("\nmouse button: %d state: %d wheel: %d dir: %d x: %d y: %d", button, state, wheel, direction,  x, y);
 
-   if( state == 0 ) //clicou
-   {
-       if( bt->Colidiu(x, y) )
-       {
-           printf("\nClicou no botao\n");
+   if (g_editorMode && g_track) {
+       if (button == 0) { // Left mouse button
+           if (state == 0) { // Pressed
+               g_mousePressed = true;
+               if (!g_track->selectControlPoint(static_cast<float>(x), static_cast<float>(y))) {
+                   // If click was not on a point, deselect any selected point
+                   // g_track->deselectControlPoint(); // Or keep selected for adding new points relative to it
+               }
+           } else { // Released
+               g_mousePressed = false;
+               // Optional: deselect point on release if not dragging, or keep selected
+               // g_track->deselectControlPoint(); 
+           }
        }
    }
+
+   if (g_editorMode && g_track && g_mousePressed && g_track->selectedPointIndex != -1) {
+       // This handles dragging if state is -1 (motion while button is down)
+       // However, GLUT calls mouse for motion ONLY IF a button is pressed.
+       // For passive motion (mouse move without button press), we need glutPassiveMotionFunc.
+       // For dragging (mouse move WITH button press), this location is fine if mouseX, mouseY are updated by glutMotionFunc.
+       // Or, more simply, we use the mouseX, mouseY updated by glutMotionFunc directly in render or a dedicated update loop for editor.
+       // For now, we'll rely on the main mouse callback and continuous update of mouseX, mouseY.
+       // The actual move logic will be in a motion callback or continuously in render if mouse is pressed.
+   }
+
 }
+
+// Function for mouse motion when a button is pressed (dragging)
+void motion(int x, int y)
+{
+    mouseX = x;
+    mouseY = y;
+
+    if (g_editorMode && g_track && g_mousePressed && g_track->selectedPointIndex != -1) {
+        g_track->moveSelectedControlPoint(static_cast<float>(x), static_cast<float>(y));
+    }
+    //glutPostRedisplay(); // Request redraw
+}
+
+// Function for mouse motion when no buttons are pressed (passive)
+void passiveMotion(int x, int y)
+{
+    mouseX = x;
+    mouseY = y;
+    //glutPostRedisplay(); // Request redraw if needed for hover effects etc.
+}
+
 
 int main(void)
 {
-   b = new Bola();
-   r = new Relogio();
-   bt = new Botao(200, 400, 140, 50, "Sou um botao");
+   g_tanque = new Tanque(screenWidth / 4.0f, screenHeight / 2.0f, 50.0f, 1.8f); // Adjusted initial params
+   g_track = new BSplineTrack(80.0f, true); // Track width 80, is a loop
+   // Example: Add some initial control points for the track
+   // g_track->addControlPoint(Vector2(200, 200));
+   // g_track->addControlPoint(Vector2(1000, 200));
+   // g_track->addControlPoint(Vector2(1000, 500));
+   // g_track->addControlPoint(Vector2(200, 500));
+   // These are now added by default in BSplineTrack constructor if empty and loop=true
 
-   CV::init(&screenWidth, &screenHeight, "Titulo da Janela: Canvas 2D - Pressione 1, 2, 3");
+   CV::init(&screenWidth, &screenHeight, "Tanque B-Spline - Editor: E, Add/Remove: +/- ");
+   glutMotionFunc(motion); // Register mouse drag callback
+   glutPassiveMotionFunc(passiveMotion); // Register mouse move callback
    CV::run();
 }
