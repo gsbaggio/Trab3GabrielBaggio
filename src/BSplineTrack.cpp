@@ -12,16 +12,16 @@ BSplineTrack::BSplineTrack(bool isLoop)
     // Add some default control points to form a basic loop
     if (loop) {
         // Initial left curve (e.g., inner part of a rectangular track, clockwise)
-        controlPointsLeft.push_back(Vector2(200, 200));  
-        controlPointsLeft.push_back(Vector2(1080, 200));
-        controlPointsLeft.push_back(Vector2(1080, 420)); 
-        controlPointsLeft.push_back(Vector2(200, 420)); 
+        controlPointsLeft.push_back(Vector2(370, 300));  
+        controlPointsLeft.push_back(Vector2(670, 300));
+        controlPointsLeft.push_back(Vector2(970, 480)); 
+        controlPointsLeft.push_back(Vector2(260, 530)); 
 
         // Initial right curve (e.g., outer part of a rectangular track, clockwise)
-        controlPointsRight.push_back(Vector2(150, 150));   
-        controlPointsRight.push_back(Vector2(1130, 150));  
-        controlPointsRight.push_back(Vector2(1130, 470)); 
-        controlPointsRight.push_back(Vector2(150, 470)); 
+        controlPointsRight.push_back(Vector2(80, 80));   
+        controlPointsRight.push_back(Vector2(1200, 80));  
+        controlPointsRight.push_back(Vector2(1200, 640)); 
+        controlPointsRight.push_back(Vector2(80, 640)); 
     }
 }
 

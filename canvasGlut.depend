@@ -82,3 +82,87 @@
 	<string>
 	<cfloat>
 
+1747262914 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\gl_canvas2d.cpp
+	"gl_canvas2d.h"
+	<GL/glut.h>
+
+1747262914 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\gl_canvas2d.h
+	<stdio.h>
+	<stdlib.h>
+	<math.h>
+	<string.h>
+	<GL/glut.h>
+	<GL/freeglut_ext.h>
+	"Vector2.h"
+
+1632060799 c:\users\gabriel\desktop\cg\demos\include\gl\glut.h
+	"freeglut_std.h"
+
+1632060797 c:\users\gabriel\desktop\cg\demos\include\gl\freeglut_std.h
+	<windows.h>
+	<EGL/egl.h>
+	<GLES/gl.h>
+	<GLES2/gl2.h>
+	<OpenGL/gl.h>
+	<OpenGL/glu.h>
+	<GL/gl.h>
+	<GL/glu.h>
+	<stdlib.h>
+
+1632060794 c:\users\gabriel\desktop\cg\demos\include\gl\freeglut_ext.h
+	<stdarg.h>
+
+1747262914 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\vector2.h
+	<cmath>
+	<cstdio>
+
+1747262914 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\relogio.cpp
+	"Relogio.h"
+	<math.h>
+	<stdio.h>
+	<stdlib.h>
+
+1747262914 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\relogio.h
+	"gl_canvas2d.h"
+
+1747278427 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\tanque.cpp
+	"Tanque.h"
+	"gl_canvas2d.h"
+	<cmath>
+	"BSplineTrack.h"
+
+1747278513 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\tanque.h
+	"gl_canvas2d.h"
+	"Vector2.h"
+	<cmath>
+
+1747262914 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\bsplinetrack.h
+	<vector>
+	"Vector2.h"
+	"gl_canvas2d.h"
+	<cmath>
+	<algorithm>
+	<cstdio>
+	<string>
+	<cfloat>
+
+1747273804 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\bsplinetrack.cpp
+	"BSplineTrack.h"
+	<vector>
+	<cmath>
+	<algorithm>
+	<cstdio>
+	<string>
+	<cfloat>
+
+1747277146 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\main.cpp
+	<GL/glut.h>
+	<GL/freeglut_ext.h>
+	<math.h>
+	<stdio.h>
+	<stdlib.h>
+	"gl_canvas2d.h"
+	"Relogio.h"
+	"Tanque.h"
+	"BSplineTrack.h"
+

@@ -26,6 +26,9 @@
 #include "Tanque.h" // Include the new Tanque header
 #include "BSplineTrack.h" // Include the BSplineTrack header
 
+void motion(int x, int y);
+void resetTankToTrackStart(Tanque* tanque, BSplineTrack* track); // Forward declaration
+
 //largura e altura inicial da tela . Alteram com o redimensionamento de tela.
 int screenWidth = 1280, screenHeight = 720;
 
@@ -99,15 +102,15 @@ void DrawMouseScreenCoords()
 void render()
 {
    // Calculate deltaTime for frame-rate independent movement
-   static float lastTime = 0.0f;
-   float currentTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0f; // Time in seconds
-   float deltaTime = currentTime - lastTime;
-   lastTime = currentTime;
+    // static float lastTime = 0.0f;
+    // float currentTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0f; // Time in seconds
+    // float deltaTime = currentTime - lastTime;
+    // lastTime = currentTime;
 
-   // Avoid issues if deltaTime is zero (e.g., first frame or very fast calls)
-   if (deltaTime <= 0.0f || deltaTime > 0.2f) { // also cap deltaTime to avoid large jumps
-       deltaTime = 1.0f / 60.0f; // Assume 60 FPS if deltaTime is invalid or too large
-   }
+    // // Avoid issues if deltaTime is zero (e.g., first frame or very fast calls)
+    // if (deltaTime <= 0.0f || deltaTime > 0.2f) { // also cap deltaTime to avoid large jumps
+    //     deltaTime = 1.0f / 60.0f; // Assume 60 FPS if deltaTime is invalid or too large
+    // }
 
    CV::clear(0.5, 0.5, 0.5); // Clear screen with a background color
    CV::text(10, screenHeight - 20, "Jogo de Tanque - Use A/D para girar, Mouse para mirar. 'E' para Editor.");
@@ -120,7 +123,7 @@ void render()
 
    // Update and Render Tank only if not in editor mode
    if (!g_editorMode && g_tanque) {
-       g_tanque->Update(static_cast<float>(mouseX), static_cast<float>(mouseY), keyA_down, keyD_down, deltaTime);
+       g_tanque->Update(static_cast<float>(mouseX), static_cast<float>(mouseY), keyA_down, keyD_down, g_track);
        g_tanque->Render();
    } else if (g_editorMode && g_tanque) {
         // Optionally render tank statically in editor mode or hide it
@@ -146,7 +149,8 @@ void render()
    }
    */
 
-   // Sleep(10); // Replaced with deltaTime for FPS control
+   Sleep(10); // This introduces a fixed delay
+   glutPostRedisplay(); // Request a redraw for the next frame
 }
 
 //funcao chamada toda vez que uma tecla for pressionada.
@@ -174,6 +178,8 @@ void keyboard(int key)
           if (!g_editorMode) {
               // Reset/reinitialize game state if needed when exiting editor
               if(g_track) g_track->deselectControlPoint();
+              // Reset tank to track start when exiting editor mode
+              resetTankToTrackStart(g_tanque, g_track);
           } else {
               keyA_down = false;
               keyD_down = false;
@@ -246,13 +252,7 @@ void mouse(int button, int state, int wheel, int direction, int x, int y)
    }
 
    if (g_editorMode && g_track && g_mousePressed && g_track->selectedPointIndex != -1) {
-       // This handles dragging if state is -1 (motion while button is down)
-       // However, GLUT calls mouse for motion ONLY IF a button is pressed.
-       // For passive motion (mouse move without button press), we need glutPassiveMotionFunc.
-       // For dragging (mouse move WITH button press), this location is fine if mouseX, mouseY are updated by glutMotionFunc.
-       // Or, more simply, we use the mouseX, mouseY updated by glutMotionFunc directly in render or a dedicated update loop for editor.
-       // For now, we'll rely on the main mouse callback and continuous update of mouseX, mouseY.
-       // The actual move logic will be in a motion callback or continuously in render if mouse is pressed.
+       motion(static_cast<int>(x), static_cast<int>(y)); // Call motion to update position
    }
 
 }
@@ -277,11 +277,102 @@ void passiveMotion(int x, int y)
     //glutPostRedisplay(); // Request redraw if needed for hover effects etc.
 }
 
+// New function to reset tank position and orientation based on track
+void resetTankToTrackStart(Tanque* tanque, BSplineTrack* track) {
+    if (!tanque || !track) {
+        printf("Error: Tank or Track is null in resetTankToTrackStart.\\\\n");
+        return;
+    }
+
+    Vector2 start_point_left, start_point_right;
+    bool position_calculated = false;
+
+    // Try to get points on the actual spline curves at t=0
+    if (track->controlPointsLeft.size() >= track->MIN_CONTROL_POINTS_PER_CURVE &&
+        track->controlPointsRight.size() >= track->MIN_CONTROL_POINTS_PER_CURVE) {
+        
+        start_point_left = track->getPointOnCurve(0.0f, CurveSide::Left);
+        start_point_right = track->getPointOnCurve(0.0f, CurveSide::Right);
+        
+        tanque->position.set((start_point_left.x + start_point_right.x) / 2.0f, 
+                             (start_point_left.y + start_point_right.y) / 2.0f);
+        position_calculated = true;
+        printf("Tank positioned at midpoint of initial B-Spline curve points.\\\\n");
+
+    } else {
+        // Fallback to using the first control points if splines are not yet defined
+        printf("Warning: Not enough control points for full B-Spline definition at track start (L:%zu, R:%zu, MinPerCurve:%d).\\\\n",
+               track->controlPointsLeft.size(), track->controlPointsRight.size(), track->MIN_CONTROL_POINTS_PER_CURVE);
+        printf("Attempting to position tank at midpoint of L0/R0 control points as fallback.\\\\n");
+
+        if (!track->controlPointsLeft.empty() && !track->controlPointsRight.empty()) {
+            start_point_left = track->controlPointsLeft[0];
+            start_point_right = track->controlPointsRight[0];
+            tanque->position.set((start_point_left.x + start_point_right.x) / 2.0f, 
+                                 (start_point_left.y + start_point_right.y) / 2.0f);
+            position_calculated = true;
+        } else {
+            printf("Error: Fallback L0/R0 control points are also missing. Tank cannot be positioned.\\\\n");
+            return; 
+        }
+    }
+
+    // Orientation calculation
+    if (track->controlPointsLeft.size() >= track->MIN_CONTROL_POINTS_PER_CURVE &&
+        track->controlPointsRight.size() >= track->MIN_CONTROL_POINTS_PER_CURVE) {
+        
+        Vector2 tangent_left = track->getTangentOnCurve(0.0f, CurveSide::Left);
+        Vector2 tangent_right = track->getTangentOnCurve(0.0f, CurveSide::Right);
+        
+        Vector2 final_tangent;
+        bool tangent_calculated = false;
+
+        Vector2 norm_tangent_left = tangent_left.normalized();
+        Vector2 norm_tangent_right = tangent_right.normalized();
+
+        if (norm_tangent_left.lengthSq() > 0.0001f && norm_tangent_right.lengthSq() > 0.0001f) {
+            final_tangent = (norm_tangent_left + norm_tangent_right).normalized();
+            if (final_tangent.lengthSq() > 0.0001f) {
+                tangent_calculated = true;
+            }
+        } else if (norm_tangent_left.lengthSq() > 0.0001f) {
+            final_tangent = norm_tangent_left;
+            tangent_calculated = true;
+        } else if (norm_tangent_right.lengthSq() > 0.0001f) {
+            final_tangent = norm_tangent_right;
+            tangent_calculated = true;
+        }
+
+        if (tangent_calculated) {
+            tanque->baseAngle = atan2(final_tangent.y, final_tangent.x);
+        } else {
+            tanque->baseAngle = 0.0f; 
+            printf("Warning: Could not determine track orientation from tangents for tank. Defaulting angle.\\\\n");
+        }
+    } else {
+        tanque->baseAngle = 0.0f; 
+        printf("Warning: Not enough control points for tangent calculation in resetTankToTrackStart. Defaulting angle.\\\\n");
+    }
+
+    tanque->forwardVector.set(cos(tanque->baseAngle), sin(tanque->baseAngle));
+    
+    if (position_calculated) {
+        printf("Tank (re)positioned to (%.2f, %.2f), angle: %.2f rad\\\\n", 
+               tanque->position.x, tanque->position.y, tanque->baseAngle);
+    } else {
+        // This case should ideally be caught by the return earlier if L0/R0 are also missing.
+        printf("Error: Tank position could not be calculated in resetTankToTrackStart.\\\\n");
+    }
+}
+
 
 int main(void)
 {
-   g_tanque = new Tanque(screenWidth / 4.0f, screenHeight / 2.0f, 50.0f, 1.8f); // Adjusted initial params
+   g_tanque = new Tanque(screenWidth / 4.0f, screenHeight / 2.0f, 0.7f, 0.02f); // Adjusted rotation rate from 0.05f to 0.1f
    g_track = new BSplineTrack(true); // Track is a loop, trackWidth removed
+
+   // Reset tank to the start of the track after creation
+   resetTankToTrackStart(g_tanque, g_track);
 
    CV::init(&screenWidth, &screenHeight, "Tanque B-Spline - Editor: E, Switch: S, Add/Remove: +/-");
    glutMotionFunc(motion); // Register mouse drag callback
