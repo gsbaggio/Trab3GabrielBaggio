@@ -328,7 +328,7 @@ void render()
     CV::color(1.0f, 1.0f, 1.0f);
     CV::text(10, 40, scoreText);
 
-    CV::text(10, 20, "Modo de Jogo | A/D = Girar | 'E' = Editor | 'M1' = Tiro");
+    CV::text(10, 20, "Modo de Jogo | A/D = Girar | 'E' = Editor | 'M1' = Tiro | 'M2' = Poder");
    }
    // --- Remove or comment out old demo logic ---
    /*
