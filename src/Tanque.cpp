@@ -1,6 +1,7 @@
 #include "Tanque.h"
 #include "gl_canvas2d.h"
 #include <cmath> // For M_PI, cos, sin, atan2
+#include <algorithm> // For std::remove_if
 #include "BSplineTrack.h" // Added this include
 
 // Define M_PI if not available (common on Windows with MSVC)
@@ -31,7 +32,7 @@ Tanque::Tanque(float x, float y, float initialSpeed, float initialRotationRate) 
     // Initialize projectile related members
     firingCooldown = 0;
     firingCooldownReset = 45; // ~0.75 seconds at 60fps
-    projectileSpeed = 7.0f;
+    projectileSpeed = 3.5f;  // Decreased from 7.0f to 4.0f
     
     // Initialize health related members
     health = 100;
@@ -151,6 +152,22 @@ void Tanque::Render() {
     for (auto& proj : projectiles) {
         proj.Render();
     }
+
+    // Draw health bar below the tank (changed from above)
+    float healthBarWidth = baseWidth * 1.2f;  // Make it slightly wider than the tank
+    float healthBarHeight = 5.0f;
+    float healthBarY = position.y + baseHeight / 2.0f + 5.0f; // Position below the tank instead of above
+    float healthPercent = static_cast<float>(health) / maxHealth;
+    
+    // Health bar background (red)
+    CV::color(1.0f, 0.2f, 0.2f);
+    CV::rectFill(position.x - healthBarWidth / 2.0f, healthBarY,
+                position.x + healthBarWidth / 2.0f, healthBarY + healthBarHeight);
+    
+    // Health bar fill (green)
+    CV::color(0.2f, 0.8f, 0.2f);
+    CV::rectFill(position.x - healthBarWidth / 2.0f, healthBarY,
+                position.x - healthBarWidth / 2.0f + healthBarWidth * healthPercent, healthBarY + healthBarHeight);
 
     // Use a flash effect when tank is invulnerable (hit)
     if (isInvulnerable) {
@@ -314,6 +331,9 @@ void Tanque::CheckCollisionAndRespond(BSplineTrack* track) {
         return;
     }
 
+    // Skip health damage if the tank is already invulnerable
+    bool canTakeDamage = !isInvulnerable;
+    
     Vector2 currentTankPosition = this->position; // Current tentative position of the tank's center
 
     // Calculate tank's world corners based on currentTankPosition and baseAngle
@@ -382,8 +402,18 @@ void Tanque::CheckCollisionAndRespond(BSplineTrack* track) {
         this->isColliding = true;
         this->collisionTimer = COLLISION_REBOUND_FRAMES;
         this->position = this->lastSafePosition; // Revert to last known safe position
-        // Optional: printf for debugging
-        // printf("Collision! Left_Proj: %.2f, Right_Proj: %.2f Reverting to (%.2f, %.2f)\\\\n", max_proj_left_debug, max_proj_right_debug, this->position.x, this->position.y);
+        
+        // Only apply damage if the tank isn't already invulnerable
+        if (canTakeDamage) {
+            // Tank takes damage - 25% of max health (same as target collision)
+            int damageTaken = maxHealth / 4;  // 25% of max health
+            health -= damageTaken;
+            if (health < 0) health = 0;
+            
+            // Make tank temporarily invulnerable and flash (just like with target collisions)
+            isInvulnerable = true;
+            invulnerabilityTimer = INVULNERABILITY_FRAMES;
+        }
     } else {
         // No new collision detected by this check.
         // If isColliding was true due to an ongoing rebound, Update() handles the timer.
@@ -391,22 +421,23 @@ void Tanque::CheckCollisionAndRespond(BSplineTrack* track) {
     }
 }
 
-// New method to check for collisions with targets
-void Tanque::CheckTargetCollisions(std::vector<Target>& targets) {
+// Changed return type from void to int to match the header declaration
+int Tanque::CheckTargetCollisions(std::vector<Target>& targets) {
     // Skip if tank is currently invulnerable
     if (isInvulnerable) {
         invulnerabilityTimer--;
         if (invulnerabilityTimer <= 0) {
             isInvulnerable = false;
         }
-        return;
+        return -1;
     }
     
     // Check each target for collision with the tank
-    for (auto& target : targets) {
-        if (target.active && target.CheckCollisionWithTank(position, baseWidth, baseHeight, baseAngle)) {
-            // Tank takes damage
-            health -= 10; // Decrease health by 10 points
+    for (size_t i = 0; i < targets.size(); i++) {
+        if (targets[i].active && targets[i].CheckCollisionWithTank(position, baseWidth, baseHeight, baseAngle)) {
+            // Tank takes damage - 25% of max health instead of fixed 10 points
+            int damageTaken = maxHealth / 4;  // 25% of max health
+            health -= damageTaken;
             if (health < 0) health = 0;
             
             // Make tank temporarily invulnerable to prevent multiple rapid hits
@@ -414,10 +445,45 @@ void Tanque::CheckTargetCollisions(std::vector<Target>& targets) {
             invulnerabilityTimer = INVULNERABILITY_FRAMES;
             
             // Target takes damage too
-            target.TakeDamage(1);
+            targets[i].TakeDamage(1);
+            
+            // Check if target was destroyed by this collision
+            if (!targets[i].active) {
+                return i; // Return the index of the destroyed target
+            }
             
             // If we hit any target, we can break the loop since we're now invulnerable
             break;
         }
     }
+    
+    return -1; // Return -1 if no target was destroyed
+}
+
+// Add the missing implementations from Tanque.h
+int Tanque::CheckProjectileTargetCollision(const Projectile& proj, std::vector<Target>& targets) {
+    if (!proj.active) return -1;
+    
+    for (size_t i = 0; i < targets.size(); i++) {
+        if (targets[i].active && targets[i].CheckCollision(proj.position)) {
+            return static_cast<int>(i);
+        }
+    }
+    
+    return -1;
+}
+
+bool Tanque::CheckAllProjectilesAgainstTargets(std::vector<Target>& targets, int& hitTargetIndex, int& hitProjectileIndex) {
+    for (size_t i = 0; i < projectiles.size(); i++) {
+        int targetIdx = CheckProjectileTargetCollision(projectiles[i], targets);
+        if (targetIdx >= 0) {
+            hitTargetIndex = targetIdx;
+            hitProjectileIndex = static_cast<int>(i);
+            return true;
+        }
+    }
+    
+    hitTargetIndex = -1;
+    hitProjectileIndex = -1;
+    return false;
 }

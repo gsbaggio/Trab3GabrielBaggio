@@ -24,8 +24,10 @@
 #include "gl_canvas2d.h"
 
 #include "Relogio.h"
-#include "Tanque.h" // Include the new Tanque header
-#include "BSplineTrack.h" // Include the BSplineTrack header
+#include "Tanque.h" 
+#include "BSplineTrack.h"
+#include "Target.h" // Add include for Target class
+#include "Projectile.h" // Add include for Projectile class
 
 void motion(int x, int y);
 void resetTankToTrackStart(Tanque* tanque, BSplineTrack* track); // Forward declaration
@@ -58,11 +60,22 @@ const int NUM_TARGETS = 5;
 std::vector<Target> g_targets;
 int g_playerScore = 0;
 
-// Function to generate a random position within track boundaries
-Vector2 GenerateRandomTargetPosition(BSplineTrack* track) {
+// Modified function to avoid respawning near the tank or previous position
+Vector2 GenerateRandomTargetPosition(BSplineTrack* track, const Vector2& avoidPosition = Vector2(0,0), bool checkAvoidance = false) {
     const int MAX_ATTEMPTS = 100;
+    const float MIN_SAFE_DISTANCE_SQ = 150.0f * 150.0f; // Min 150 pixels away from tank/previous position
     
-    for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    Vector2 position;
+    int attempts = 0;
+    
+    do {
+        attempts++;
+        if (attempts > MAX_ATTEMPTS) {
+            // If we've tried too many times without success, return the last generated position
+            printf("Warning: Could not find ideal target position after %d attempts\n", MAX_ATTEMPTS);
+            return position;
+        }
+        
         // Generate a random parameter value along the track (0.0 to 1.0)
         float t = static_cast<float>(rand()) / RAND_MAX;
         
@@ -72,27 +85,33 @@ Vector2 GenerateRandomTargetPosition(BSplineTrack* track) {
         
         // Calculate a point between the curves with a random interpolation
         float interpFactor = 0.2f + 0.6f * static_cast<float>(rand()) / RAND_MAX; // 0.2 to 0.8
-        Vector2 position = leftPoint + (rightPoint - leftPoint) * interpFactor;
+        position = leftPoint + (rightPoint - leftPoint) * interpFactor;
         
-        // Make sure position is not too close to other targets
-        bool tooClose = false;
+        // Check distance to tank or previous position (if needed)
+        if (checkAvoidance) {
+            float distSq = position.distSq(avoidPosition);
+            if (distSq < MIN_SAFE_DISTANCE_SQ) {
+                continue; // Too close, try a different position
+            }
+        }
+        
+        // Check distance to other active targets
+        bool tooCloseToOtherTargets = false;
         for (const auto& target : g_targets) {
             if (target.active) {
-                float dx = position.x - target.position.x;
-                float dy = position.y - target.position.y;
-                float distSq = dx*dx + dy*dy;
-                
+                float distSq = position.distSq(target.position);
                 if (distSq < 50.0f * 50.0f) { // Minimum distance of 50 pixels
-                    tooClose = true;
+                    tooCloseToOtherTargets = true;
                     break;
                 }
             }
         }
         
-        if (!tooClose) {
-            return position;
+        if (!tooCloseToOtherTargets) {
+            return position; // Found a good position
         }
-    }
+        
+    } while (attempts <= MAX_ATTEMPTS);
     
     // Fallback position if we can't find a good spot
     return Vector2(0, 0);
@@ -110,14 +129,40 @@ void SpawnTarget(BSplineTrack* track) {
     }
     
     // If no inactive slot found and we have fewer than NUM_TARGETS, add a new one
+    bool isNewTarget = false;
     if (targetIndex == -1 && g_targets.size() < NUM_TARGETS) {
         g_targets.emplace_back();
         targetIndex = g_targets.size() - 1;
+        isNewTarget = true;
     }
     
     // If we found a slot to use or added a new one
     if (targetIndex >= 0 && targetIndex < static_cast<int>(g_targets.size())) {
-        Vector2 position = GenerateRandomTargetPosition(track);
+        // Store previous position for existing targets (those being respawned)
+        Vector2 previousPosition = g_targets[targetIndex].position;
+        Vector2 position;
+        
+        if (isNewTarget) {
+            // For completely new targets, just avoid the tank
+            position = GenerateRandomTargetPosition(track, g_tanque->position, true);
+        } else {
+            // For respawning targets, avoid BOTH the tank AND the previous position
+            position = GenerateRandomTargetPosition(track, g_tanque->position, true);
+            
+            // If we successfully found a position away from the tank,
+            // make sure it's also away from previous position
+            if (position.x != 0.0f || position.y != 0.0f) {
+                if (position.distSq(previousPosition) < 150.0f * 150.0f) {
+                    // If still too close to previous position, try again
+                    Vector2 betterPosition = GenerateRandomTargetPosition(track, previousPosition, true);
+                    if (betterPosition.x != 0.0f || betterPosition.y != 0.0f) {
+                        position = betterPosition;
+                    }
+                }
+            }
+        }
+        
+        // Set the target's new position and activate it
         g_targets[targetIndex].position = position;
         g_targets[targetIndex].active = true;
         g_targets[targetIndex].health = g_targets[targetIndex].maxHealth; // Reset health when respawning
@@ -205,7 +250,7 @@ void render()
    
    // Draw player score at top-left (BEFORE translate to keep it fixed on screen)
    char scoreText[50];
-   sprintf(scoreText, "Score: %d | Health: %d%%", g_playerScore, g_tanque->health);
+   sprintf(scoreText, "Score: %d", g_playerScore); // Removed health percentage display
    CV::color(1.0f, 1.0f, 1.0f);
    CV::text(10, screenHeight - 40, scoreText);
    
@@ -234,8 +279,15 @@ void render()
                        static_cast<float>(mouseY + g_tanque->position.y - screenHeight/2), 
                        keyA_down, keyD_down, g_track);
        
-       // Check for tank collision with targets
-       g_tanque->CheckTargetCollisions(g_targets);
+       // Check for tank collision with targets - now catching the return value
+       int destroyedTargetIndex = g_tanque->CheckTargetCollisions(g_targets);
+       if (destroyedTargetIndex >= 0) {
+           // Target was destroyed by tank collision - increase score and respawn
+           g_playerScore++;
+           
+           // Spawn a new target to replace the destroyed one
+           SpawnTarget(g_track);
+       }
        
        // Check for projectile-target collisions
        int hitTargetIndex = -1;

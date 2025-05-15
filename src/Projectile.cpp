@@ -1,61 +1,73 @@
 #include "Projectile.h"
 #include <cmath>
 
-Projectile::Projectile() : position(0, 0), velocity(0, 0), active(false), 
-                          radius(3.0f), maxLifeTime(5.0f), currentLifeTime(0.0f) {
+Projectile::Projectile()
+    : position(0, 0), previousPosition(0, 0), velocity(0, 0), 
+      active(false), lifetime(300), collisionRadius(8.0f) {
 }
 
-Projectile::Projectile(const Vector2& startPos, const Vector2& startVel, float size)
-    : position(startPos), velocity(startVel), active(true), 
-      radius(size), maxLifeTime(5.0f), currentLifeTime(0.0f) {
+Projectile::Projectile(const Vector2& pos, const Vector2& vel, float radius)
+    : position(pos), previousPosition(pos), velocity(vel), 
+      active(true), lifetime(300), collisionRadius(radius) {
 }
 
 void Projectile::Update() {
     if (!active) return;
     
-    // Update position based on velocity
-    position.x += velocity.x;
-    position.y += velocity.y;
+    previousPosition = position; // Store current position before updating
+    position = position + velocity;
     
-    // Track lifetime
-    currentLifeTime += 1.0f/60.0f; // Assuming 60fps
-    if (currentLifeTime >= maxLifeTime) {
-        active = false;
+    if (lifetime > 0) {
+        lifetime--;
+        if (lifetime <= 0) active = false;
     }
 }
 
 void Projectile::Render() {
     if (!active) return;
-    
-    // Draw projectile as a small filled circle
-    CV::color(1.0f, 0.8f, 0.2f); // Yellow-orange color
-    CV::circleFill(position.x, position.y, radius, 8);
+    CV::color(1.0f, 0.7f, 0.0f); // Orange-yellow for projectiles
+    CV::circleFill(position.x, position.y, 4.0f, 10); // Visual radius stays at 4.0f
 }
 
-bool Projectile::CheckCollisionWithTrack(BSplineTrack* track) {
-    if (!active || !track) return false;
-
-    // Check collision with Left Curve
-    ClosestPointInfo cpiLeft = track->findClosestPointOnCurve(position, CurveSide::Left);
-    if (cpiLeft.isValid) {
-        Vector2 vec_to_point = position - cpiLeft.point;
-        float projection = vec_to_point.x * cpiLeft.normal.x + vec_to_point.y * cpiLeft.normal.y;
-        if (projection > 0.0f) { // Projectile is "outside" the left curve
-            active = false;
-            return true;
+void Projectile::CheckCollisionWithTrack(BSplineTrack* track) {
+    if (!active || !track) return;
+    
+    // Get closest points on both track boundaries for current position
+    ClosestPointInfo cpiLeftCurrent = track->findClosestPointOnCurve(position, CurveSide::Left);
+    ClosestPointInfo cpiRightCurrent = track->findClosestPointOnCurve(position, CurveSide::Right);
+    
+    // Check collision with current position and boundaries
+    if (cpiLeftCurrent.isValid && cpiLeftCurrent.distance < collisionRadius) {
+        active = false;
+        return;
+    }
+    
+    if (cpiRightCurrent.isValid && cpiRightCurrent.distance < collisionRadius) {
+        active = false;
+        return;
+    }
+    
+    // If moving fast, also check for "tunneling" through boundaries by sampling points along movement path
+    float movementLength = (position - previousPosition).length();
+    if (movementLength > collisionRadius * 1.5f) {
+        const int numSamples = 5; // Sample a few points along the movement path
+        
+        for (int i = 1; i < numSamples; i++) {
+            float t = static_cast<float>(i) / numSamples;
+            Vector2 samplePos = previousPosition + (position - previousPosition) * t;
+            
+            // Check sample point against both boundaries
+            ClosestPointInfo cpiLeftSample = track->findClosestPointOnCurve(samplePos, CurveSide::Left);
+            if (cpiLeftSample.isValid && cpiLeftSample.distance < collisionRadius) {
+                active = false;
+                return;
+            }
+            
+            ClosestPointInfo cpiRightSample = track->findClosestPointOnCurve(samplePos, CurveSide::Right);
+            if (cpiRightSample.isValid && cpiRightSample.distance < collisionRadius) {
+                active = false;
+                return;
+            }
         }
     }
-
-    // Check collision with Right Curve
-    ClosestPointInfo cpiRight = track->findClosestPointOnCurve(position, CurveSide::Right);
-    if (cpiRight.isValid) {
-        Vector2 vec_to_point = position - cpiRight.point;
-        float projection = vec_to_point.x * cpiRight.normal.x + vec_to_point.y * cpiRight.normal.y;
-        if (projection < 0.0f) { // Projectile is "outside" the right curve
-            active = false;
-            return true;
-        }
-    }
-
-    return false;
 }
