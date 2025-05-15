@@ -204,11 +204,7 @@ void Tanque::Render() {
     float vy_base[4] = {p1_world.y, p2_world.y, p3_world.y, p4_world.y};
     CV::polygonFill(vx_base, vy_base, 4);
 
-    // Draw a line indicating the front of the base
-    CV::color(1,1,1); // White line for direction
-    float frontMarkerLength = baseWidth * 0.6f;
-    CV::line(position.x, position.y, position.x + forwardVector.x * frontMarkerLength, position.y + forwardVector.y * frontMarkerLength);
-
+   
 
     // Render Top (Turret - Circle and Cannon - Rectangle)
     CV::color(0.1f, 0.3f, 0.1f); // Darker green for turret
@@ -236,10 +232,7 @@ void Tanque::Render() {
     float vy_cannon[4] = {c1.y, c2.y, c4.y, c3.y};
     CV::polygonFill(vx_cannon, vy_cannon, 4);
 
-    // Draw the movement vector line
-    CV::color(1, 0, 0); // Red for movement vector
-    CV::line(position.x, position.y, position.x + forwardVector.x * 50, position.y + forwardVector.y * 50); // Length 50 for visibility
-    
+   
     // Draw cooldown indicator if cooling down
     if (firingCooldown > 0) {
         float cooldownFraction = (float)firingCooldown / firingCooldownReset;

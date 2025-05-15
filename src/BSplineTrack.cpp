@@ -279,8 +279,8 @@ void BSplineTrack::Render(bool editorMode) {
     if (controlPointsLeft.size() >= MIN_CONTROL_POINTS_PER_CURVE && 
         controlPointsRight.size() >= MIN_CONTROL_POINTS_PER_CURVE) {
         
-        // Road/track surface color - dark asphalt gray with a slight blue tint
-        CV::color(0.25f, 0.25f, 0.3f);
+        // Road/track surface color - changed to light gray (former background color)
+        CV::color(0.5f, 0.5f, 0.5f);
         
         const int fill_steps = 100; // More segments for smoother fill
         
@@ -309,7 +309,7 @@ void BSplineTrack::Render(bool editorMode) {
         // Add a yellow dotted line in the center of the track
         CV::color(1.0f, 1.0f, 0.0f); // Bright yellow
         
-        const int dash_length = 3;  // Reduced from 10 to 5 (shorter dashes)
+        const int dash_length = 2;  // Reduced from 10 to 5 (shorter dashes)
         const int space_length = 2; // Reduced from 10 to 5 (more frequent dashes)
         
         // Calculate and draw the centerline dashes
@@ -400,11 +400,17 @@ void BSplineTrack::Render(bool editorMode) {
         
         char editorHelpTextLine1[200];
         char editorHelpTextLine2[200];
-        sprintf(editorHelpTextLine1, "EDITOR MODE | Active: %s (S to switch) | Selected: %s", 
+        char editorHelpTextLine3[200];
+        char editorHelpTextLine4[200];
+        sprintf(editorHelpTextLine1, "Modo de edicao | Curva selecionada: %s", 
                 activeCurveStr.c_str(), selectedInfoStr.c_str());
-        sprintf(editorHelpTextLine2, "Click to select/drag. +/- to add/remove on active curve.");
+        sprintf(editorHelpTextLine2, "'A' = Add (adiciona ponto de controle para a curva selecionada)");
+        sprintf(editorHelpTextLine3, "'D' = Delete (deleta um ponto de controle da curva)");
+        sprintf(editorHelpTextLine4, "'S' = Switch (troca entre pontos das curvas Left e Right)");
         CV::text(10, 20, editorHelpTextLine1);
         CV::text(10, 40, editorHelpTextLine2);
+        CV::text(10, 60, editorHelpTextLine3);
+        CV::text(10, 80, editorHelpTextLine4);
     }
 }
 
