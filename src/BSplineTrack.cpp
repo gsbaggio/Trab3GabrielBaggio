@@ -275,11 +275,46 @@ void BSplineTrack::renderCurve(const std::vector<Vector2>& points, float r, floa
 
 // Render the track
 void BSplineTrack::Render(bool editorMode) {
-    // Render left curve (e.g., green boundary)
+    // Fill the track surface with a solid color first (new code)
+    if (controlPointsLeft.size() >= MIN_CONTROL_POINTS_PER_CURVE && 
+        controlPointsRight.size() >= MIN_CONTROL_POINTS_PER_CURVE) {
+        
+        // Road/track surface color - dark asphalt gray with a slight blue tint
+        CV::color(0.25f, 0.25f, 0.3f);
+        
+        const int fill_steps = 100; // More segments for smoother fill
+        
+        // Draw filled triangles between the curves to create a solid surface
+        for (int i = 0; i < fill_steps; ++i) {
+            float t1 = static_cast<float>(i) / fill_steps;
+            float t2 = static_cast<float>(i+1) / fill_steps;
+            
+            Vector2 left1 = getPointOnCurve(t1, CurveSide::Left);
+            Vector2 right1 = getPointOnCurve(t1, CurveSide::Right);
+            Vector2 left2 = getPointOnCurve(t2, CurveSide::Left);
+            Vector2 right2 = getPointOnCurve(t2, CurveSide::Right);
+            
+            // Draw two triangles to form a quad between the curves
+            // Triangle 1: left1, right1, left2
+            float vx1[3] = {left1.x, right1.x, left2.x};
+            float vy1[3] = {left1.y, right1.y, left2.y};
+            CV::triangleFill(vx1, vy1);
+            
+            // Triangle 2: left2, right1, right2
+            float vx2[3] = {left2.x, right1.x, right2.x};
+            float vy2[3] = {left2.y, right1.y, right2.y};
+            CV::triangleFill(vx2, vy2);
+        }
+    }
+    
+    // Render left curve boundary (e.g., green boundary)
     renderCurve(controlPointsLeft, 0.1f, 0.4f, 0.1f); // Darker green for the line itself
-    // Render right curve (e.g., red boundary)
+    
+    // Render right curve boundary (e.g., red boundary)
     renderCurve(controlPointsRight, 0.4f, 0.1f, 0.1f); // Darker red for the line itself
 
+    // Remove the old code that drew lines between curves
+    /*
     // Draw "fill" lines between the two curves to represent the track surface
     if (controlPointsLeft.size() >= MIN_CONTROL_POINTS_PER_CURVE && controlPointsRight.size() >= MIN_CONTROL_POINTS_PER_CURVE) {
         CV::color(0.3f, 0.3f, 0.3f); // Color for track surface lines (grey)
@@ -291,6 +326,7 @@ void BSplineTrack::Render(bool editorMode) {
             CV::line(pt_left.x, pt_left.y, pt_right.x, pt_right.y);
         }
     }
+    */
 
     // Draw control points if in editor mode
     if (editorMode) {

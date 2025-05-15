@@ -175,13 +175,25 @@ void CV::circleFill( float x, float y, float radius, int div )
    glEnd();
 }
 
+//funcao para desenhar um triangulo preenchido
+void CV::triangleFill(float vx[], float vy[])
+{
+   int cont;
+   glBegin(GL_TRIANGLES);
+      for(cont=0; cont<3; cont++)
+      {
+         glVertex2d(vx[cont], vy[cont]);
+      }
+   glEnd();
+}
+
 //coordenada de offset para desenho de objetos.
 //nao armazena translacoes cumulativas.
 void CV::translate(float offsetX, float offsetY)
 {
    glMatrixMode(GL_MODELVIEW);
    glLoadIdentity();
-   glTranslated(offsetX, offsetY, 0);
+   glTranslated(offsetX, offsetY, 0);  
 }
 
 void CV::translate(Vector2 offset)

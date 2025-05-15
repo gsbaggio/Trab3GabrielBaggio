@@ -181,14 +181,6 @@ void Tanque::Render() {
     }
 
     // Render Base (Rectangle)
-    // We need to draw the rectangle rotated around its center (position)
-    // 1. Translate to the tank's position
-    // 2. Rotate by baseAngle
-    // 3. Draw the rectangle centered at (0,0) in local coordinates
-    // 4. Undo rotation and translation (or use CV::pushMatrix/popMatrix if available)
-
-    // For simplicity, we'll calculate the 4 corners of the rotated rectangle manually.
-    // This is equivalent to applying a rotation matrix to the local corner coordinates.
     float halfW = baseWidth / 2.0f;
     float halfH = baseHeight / 2.0f;
 
@@ -207,14 +199,10 @@ void Tanque::Render() {
     Vector2 p3_world(p3_local.x * cosB - p3_local.y * sinB + position.x, p3_local.x * sinB + p3_local.y * cosB + position.y);
     Vector2 p4_world(p4_local.x * cosB - p4_local.y * sinB + position.x, p4_local.x * sinB + p4_local.y * cosB + position.y);
 
-    // Draw the base as a polygon (or multiple lines/triangles if rectFill takes only axis-aligned)
-    // Assuming CV::rectFill might not support rotated rectangles directly, we draw lines.
-    // If CV::polygon or similar exists, that would be better.
-    // For now, let's use lines to form the rectangle.
-    CV::line(p1_world.x, p1_world.y, p2_world.x, p2_world.y);
-    CV::line(p2_world.x, p2_world.y, p3_world.x, p3_world.y);
-    CV::line(p3_world.x, p3_world.y, p4_world.x, p4_world.y);
-    CV::line(p4_world.x, p4_world.y, p1_world.x, p1_world.y);
+    // Draw the base as a filled polygon instead of lines
+    float vx_base[4] = {p1_world.x, p2_world.x, p3_world.x, p4_world.x};
+    float vy_base[4] = {p1_world.y, p2_world.y, p3_world.y, p4_world.y};
+    CV::polygonFill(vx_base, vy_base, 4);
 
     // Draw a line indicating the front of the base
     CV::color(1,1,1); // White line for direction
@@ -226,26 +214,14 @@ void Tanque::Render() {
     CV::color(0.1f, 0.3f, 0.1f); // Darker green for turret
     CV::circleFill(position.x, position.y, turretRadius, 20); // Draw turret base
 
-    // Cannon
-    // Calculate cannon end points based on topAngle
-    float cannonStartX = position.x + cos(topAngle) * (turretRadius * 0.5f); // Start a bit from center
-    float cannonStartY = position.y + sin(topAngle) * (turretRadius * 0.5f);
-    float cannonEndX = position.x + cos(topAngle) * cannonLength;
-    float cannonEndY = position.y + sin(topAngle) * cannonLength;
-
-    // To draw the cannon as a rectangle, we need its 4 corners.
-    // The cannon points along topAngle. Its width is cannonWidth.
+    // Cannon calculations
     float halfCW = cannonWidth / 2.0f;
     float cosT = cos(topAngle);
     float sinT = sin(topAngle);
-    float cosT_perp = cos(topAngle + M_PI / 2.0f); // Perpendicular to cannon direction
-    float sinT_perp = sin(topAngle + M_PI / 2.0f); // Perpendicular to cannon direction
 
-    // Points relative to tank's position, then add tank's position
-    // Start of cannon (closer to turret center)
-    Vector2 c1_local(0, -halfCW); // Local to cannon's orientation
+    // Points relative to tank's position
+    Vector2 c1_local(0, -halfCW);
     Vector2 c2_local(0,  halfCW);
-    // End of cannon
     Vector2 c3_local(cannonLength, -halfCW);
     Vector2 c4_local(cannonLength,  halfCW);
 
@@ -255,11 +231,10 @@ void Tanque::Render() {
     Vector2 c3(position.x + (c3_local.x * cosT - c3_local.y * sinT), position.y + (c3_local.x * sinT + c3_local.y * cosT));
     Vector2 c4(position.x + (c4_local.x * cosT - c4_local.y * sinT), position.y + (c4_local.x * sinT + c4_local.y * cosT));
 
-    // Draw cannon using lines (assuming no rotated rectFill)
-    CV::line(c1.x, c1.y, c3.x, c3.y); // One side
-    CV::line(c2.x, c2.y, c4.x, c4.y); // Other side
-    CV::line(c3.x, c3.y, c4.x, c4.y); // Tip
-    // CV::line(c1.x, c1.y, c2.x, c2.y); // Base (optional, might be covered by turret)
+    // Draw cannon as a filled polygon instead of lines
+    float vx_cannon[4] = {c1.x, c2.x, c4.x, c3.x}; // Order matters for convex polygon
+    float vy_cannon[4] = {c1.y, c2.y, c4.y, c3.y};
+    CV::polygonFill(vx_cannon, vy_cannon, 4);
 
     // Draw the movement vector line
     CV::color(1, 0, 0); // Red for movement vector

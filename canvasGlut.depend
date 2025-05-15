@@ -1,9 +1,9 @@
 # depslib dependency file v1.0
-1747159387 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\gl_canvas2d.cpp
+1747334027 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\gl_canvas2d.cpp
 	"gl_canvas2d.h"
 	<GL/glut.h>
 
-1747157735 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\gl_canvas2d.h
+1747334661 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\gl_canvas2d.h
 	<stdio.h>
 	<stdlib.h>
 	<math.h>
@@ -82,7 +82,7 @@
 	<string>
 	<cfloat>
 
-1747316442 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\bsplinetrack.cpp
+1747334268 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\bsplinetrack.cpp
 	"BSplineTrack.h"
 	<vector>
 	<cmath>

@@ -66,6 +66,9 @@ public:
 
     //funcao para executar a Canvas2D
     static void run();
+
+    //funcao para desenhar um triangulo preenchido
+    static void triangleFill(float vx[], float vy[]);
 };
 
 #endif
