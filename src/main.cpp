@@ -115,15 +115,20 @@ void render()
    CV::clear(0.5, 0.5, 0.5); // Clear screen with a background color
    CV::text(10, screenHeight - 20, "Jogo de Tanque - Use A/D para girar, Mouse para mirar. 'E' para Editor.");
 
+   if(!g_editorMode){
+    CV::translate(-g_tanque->position.x + screenWidth/2, -g_tanque->position.y + screenHeight/2);
+   }
+
    if (g_track) {
        g_track->Render(g_editorMode);
    }
 
    DrawMouseScreenCoords();
 
+
    // Update and Render Tank only if not in editor mode
    if (!g_editorMode && g_tanque) {
-       g_tanque->Update(static_cast<float>(mouseX), static_cast<float>(mouseY), keyA_down, keyD_down, g_track);
+       g_tanque->Update(static_cast<float>(mouseX + g_tanque->position.x - screenWidth/2), static_cast<float>(mouseY + g_tanque->position.y - screenHeight/2), keyA_down, keyD_down, g_track);
        g_tanque->Render();
    } else if (g_editorMode && g_tanque) {
         // Optionally render tank statically in editor mode or hide it
@@ -203,7 +208,7 @@ void keyboard(int key)
       case '-': // Remove control point in editor mode
           if (g_editorMode && g_track) {
               // removeControlPoint now works on the active curve's selection or its last point
-              g_track->removeControlPoint(); 
+              g_track->removeControlPoint();
           }
           break;
 
@@ -246,7 +251,7 @@ void mouse(int button, int state, int wheel, int direction, int x, int y)
            } else { // Released
                g_mousePressed = false;
                // Optional: deselect point on release if not dragging, or keep selected
-               // g_track->deselectControlPoint(); 
+               // g_track->deselectControlPoint();
            }
        }
    }
@@ -290,11 +295,11 @@ void resetTankToTrackStart(Tanque* tanque, BSplineTrack* track) {
     // Try to get points on the actual spline curves at t=0
     if (track->controlPointsLeft.size() >= track->MIN_CONTROL_POINTS_PER_CURVE &&
         track->controlPointsRight.size() >= track->MIN_CONTROL_POINTS_PER_CURVE) {
-        
+
         start_point_left = track->getPointOnCurve(0.0f, CurveSide::Left);
         start_point_right = track->getPointOnCurve(0.0f, CurveSide::Right);
-        
-        tanque->position.set((start_point_left.x + start_point_right.x) / 2.0f, 
+
+        tanque->position.set((start_point_left.x + start_point_right.x) / 2.0f,
                              (start_point_left.y + start_point_right.y) / 2.0f);
         position_calculated = true;
         printf("Tank positioned at midpoint of initial B-Spline curve points.\\\\n");
@@ -308,22 +313,22 @@ void resetTankToTrackStart(Tanque* tanque, BSplineTrack* track) {
         if (!track->controlPointsLeft.empty() && !track->controlPointsRight.empty()) {
             start_point_left = track->controlPointsLeft[0];
             start_point_right = track->controlPointsRight[0];
-            tanque->position.set((start_point_left.x + start_point_right.x) / 2.0f, 
+            tanque->position.set((start_point_left.x + start_point_right.x) / 2.0f,
                                  (start_point_left.y + start_point_right.y) / 2.0f);
             position_calculated = true;
         } else {
             printf("Error: Fallback L0/R0 control points are also missing. Tank cannot be positioned.\\\\n");
-            return; 
+            return;
         }
     }
 
     // Orientation calculation
     if (track->controlPointsLeft.size() >= track->MIN_CONTROL_POINTS_PER_CURVE &&
         track->controlPointsRight.size() >= track->MIN_CONTROL_POINTS_PER_CURVE) {
-        
+
         Vector2 tangent_left = track->getTangentOnCurve(0.0f, CurveSide::Left);
         Vector2 tangent_right = track->getTangentOnCurve(0.0f, CurveSide::Right);
-        
+
         Vector2 final_tangent;
         bool tangent_calculated = false;
 
@@ -346,18 +351,18 @@ void resetTankToTrackStart(Tanque* tanque, BSplineTrack* track) {
         if (tangent_calculated) {
             tanque->baseAngle = atan2(final_tangent.y, final_tangent.x);
         } else {
-            tanque->baseAngle = 0.0f; 
+            tanque->baseAngle = 0.0f;
             printf("Warning: Could not determine track orientation from tangents for tank. Defaulting angle.\\\\n");
         }
     } else {
-        tanque->baseAngle = 0.0f; 
+        tanque->baseAngle = 0.0f;
         printf("Warning: Not enough control points for tangent calculation in resetTankToTrackStart. Defaulting angle.\\\\n");
     }
 
     tanque->forwardVector.set(cos(tanque->baseAngle), sin(tanque->baseAngle));
-    
+
     if (position_calculated) {
-        printf("Tank (re)positioned to (%.2f, %.2f), angle: %.2f rad\\\\n", 
+        printf("Tank (re)positioned to (%.2f, %.2f), angle: %.2f rad\\\\n",
                tanque->position.x, tanque->position.y, tanque->baseAngle);
     } else {
         // This case should ideally be caught by the return earlier if L0/R0 are also missing.

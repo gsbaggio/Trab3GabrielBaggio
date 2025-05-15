@@ -53,15 +53,16 @@
 	"Tanque.h"
 	"BSplineTrack.h"
 
-1747157542 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\tanque.h
+1747316442 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\tanque.h
 	"gl_canvas2d.h"
 	"Vector2.h"
 	<cmath>
 
-1747157775 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\tanque.cpp
+1747316442 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\tanque.cpp
 	"Tanque.h"
 	"gl_canvas2d.h"
 	<cmath>
+	"BSplineTrack.h"
 
 1747164380 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\bsplinetrack.h
 	<vector>
@@ -73,7 +74,7 @@
 	<string>
 	<cfloat>
 
-1747164492 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\bsplinetrack.cpp
+1747316442 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\bsplinetrack.cpp
 	"BSplineTrack.h"
 	<vector>
 	<cmath>
