@@ -38,7 +38,7 @@ public:
 
     // Collision constants
     static const int COLLISION_REBOUND_FRAMES = 90; // Approx 1.5s at 60fps
-    static constexpr float REBOUND_SPEED_FACTOR = 0.5f; // 50% of normal speed for rebound
+    static constexpr float REBOUND_SPEED_FACTOR = 0.3f; // 30% of normal speed for rebound
 
     Tanque(float x, float y, float initialSpeed = 1.0f, float initialRotationRate = 0.03f); // Adjusted defaults for per-frame
 
