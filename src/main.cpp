@@ -19,6 +19,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "gl_canvas2d.h"
 
@@ -49,6 +50,104 @@ int mouseX, mouseY; //variaveis globais do mouse para poder exibir dentro da ren
 // Flags for tank rotation
 bool keyA_down = false;
 bool keyD_down = false;
+
+// Constants for targets
+const int NUM_TARGETS = 5;
+
+// Global variables for game state
+std::vector<Target> g_targets;
+int g_playerScore = 0;
+
+// Function to generate a random position within track boundaries
+Vector2 GenerateRandomTargetPosition(BSplineTrack* track) {
+    const int MAX_ATTEMPTS = 100;
+    
+    for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        // Generate a random parameter value along the track (0.0 to 1.0)
+        float t = static_cast<float>(rand()) / RAND_MAX;
+        
+        // Get points on both left and right curves at this parameter
+        Vector2 leftPoint = track->getPointOnCurve(t, CurveSide::Left);
+        Vector2 rightPoint = track->getPointOnCurve(t, CurveSide::Right);
+        
+        // Calculate a point between the curves with a random interpolation
+        float interpFactor = 0.2f + 0.6f * static_cast<float>(rand()) / RAND_MAX; // 0.2 to 0.8
+        Vector2 position = leftPoint + (rightPoint - leftPoint) * interpFactor;
+        
+        // Make sure position is not too close to other targets
+        bool tooClose = false;
+        for (const auto& target : g_targets) {
+            if (target.active) {
+                float dx = position.x - target.position.x;
+                float dy = position.y - target.position.y;
+                float distSq = dx*dx + dy*dy;
+                
+                if (distSq < 50.0f * 50.0f) { // Minimum distance of 50 pixels
+                    tooClose = true;
+                    break;
+                }
+            }
+        }
+        
+        if (!tooClose) {
+            return position;
+        }
+    }
+    
+    // Fallback position if we can't find a good spot
+    return Vector2(0, 0);
+}
+
+// Function to spawn a target at a random position
+void SpawnTarget(BSplineTrack* track) {
+    // Find an inactive target slot or the first active one if all are active
+    int targetIndex = -1;
+    for (size_t i = 0; i < g_targets.size(); i++) {
+        if (!g_targets[i].active) {
+            targetIndex = i;
+            break;
+        }
+    }
+    
+    // If no inactive slot found and we have fewer than NUM_TARGETS, add a new one
+    if (targetIndex == -1 && g_targets.size() < NUM_TARGETS) {
+        g_targets.emplace_back();
+        targetIndex = g_targets.size() - 1;
+    }
+    
+    // If we found a slot to use or added a new one
+    if (targetIndex >= 0 && targetIndex < static_cast<int>(g_targets.size())) {
+        Vector2 position = GenerateRandomTargetPosition(track);
+        g_targets[targetIndex].position = position;
+        g_targets[targetIndex].active = true;
+    }
+}
+
+// Function to initialize or reset all targets
+void InitializeTargets(BSplineTrack* track) {
+    g_targets.clear();
+    
+    // Create NUM_TARGETS targets
+    for (int i = 0; i < NUM_TARGETS; i++) {
+        SpawnTarget(track);
+    }
+}
+
+// Function to reset the game state
+void ResetGameState(Tanque* tanque, BSplineTrack* track) {
+    g_playerScore = 0;
+    
+    // Reset tank health
+    if (tanque) {
+        tanque->health = tanque->maxHealth;
+        tanque->isInvulnerable = false;
+        tanque->invulnerabilityTimer = 0;
+    }
+    
+    InitializeTargets(track);
+    
+    // Any additional reset logic goes here
+}
 
 // --- Comment out or remove old drawing functions if no longer needed ---
 /*
@@ -101,18 +200,14 @@ void DrawMouseScreenCoords()
 //Deve-se manter essa funo com poucas linhas de codigo.
 void render()
 {
-   // Calculate deltaTime for frame-rate independent movement
-    // static float lastTime = 0.0f;
-    // float currentTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0f; // Time in seconds
-    // float deltaTime = currentTime - lastTime;
-    // lastTime = currentTime;
-
-    // // Avoid issues if deltaTime is zero (e.g., first frame or very fast calls)
-    // if (deltaTime <= 0.0f || deltaTime > 0.2f) { // also cap deltaTime to avoid large jumps
-    //     deltaTime = 1.0f / 60.0f; // Assume 60 FPS if deltaTime is invalid or too large
-    // }
-
    CV::clear(0.5, 0.5, 0.5); // Clear screen with a background color
+   
+   // Draw player score at top-left (BEFORE translate to keep it fixed on screen)
+   char scoreText[50];
+   sprintf(scoreText, "Score: %d | Health: %d%%", g_playerScore, g_tanque->health);
+   CV::color(1.0f, 1.0f, 1.0f);
+   CV::text(10, screenHeight - 40, scoreText);
+   
    CV::text(10, screenHeight - 20, "Jogo de Tanque - Use A/D para girar, Mouse para mirar. 'E' para Editor.");
 
    if(!g_editorMode){
@@ -122,13 +217,60 @@ void render()
    if (g_track) {
        g_track->Render(g_editorMode);
    }
+   
+   // Render targets
+   if (!g_editorMode) {
+       for (auto& target : g_targets) {
+           target.Render();
+       }
+   }
 
    DrawMouseScreenCoords();
 
-
    // Update and Render Tank only if not in editor mode
    if (!g_editorMode && g_tanque) {
-       g_tanque->Update(static_cast<float>(mouseX + g_tanque->position.x - screenWidth/2), static_cast<float>(mouseY + g_tanque->position.y - screenHeight/2), keyA_down, keyD_down, g_track);
+       g_tanque->Update(static_cast<float>(mouseX + g_tanque->position.x - screenWidth/2), 
+                       static_cast<float>(mouseY + g_tanque->position.y - screenHeight/2), 
+                       keyA_down, keyD_down, g_track);
+       
+       // Check for tank collision with targets
+       g_tanque->CheckTargetCollisions(g_targets);
+       
+       // Check for projectile-target collisions
+       int hitTargetIndex = -1;
+       int hitProjectileIndex = -1;
+       if (g_tanque->CheckAllProjectilesAgainstTargets(g_targets, hitTargetIndex, hitProjectileIndex)) {
+           // Apply damage to target when hit by projectile
+           if (hitTargetIndex >= 0 && hitTargetIndex < static_cast<int>(g_targets.size())) {
+               // Apply damage to the target
+               g_targets[hitTargetIndex].TakeDamage(1);
+               
+               // If target was destroyed (health reached 0)
+               if (!g_targets[hitTargetIndex].active) {
+                   g_playerScore++;
+                   
+                   // Spawn a new target to replace the destroyed one
+                   SpawnTarget(g_track);
+               }
+           }
+           
+           if (hitProjectileIndex >= 0 && hitProjectileIndex < static_cast<int>(g_tanque->projectiles.size())) {
+               g_tanque->projectiles[hitProjectileIndex].active = false;
+           }
+       }
+       
+       // Check for game over condition
+       if (g_tanque->health <= 0) {
+           CV::color(1.0f, 0.0f, 0.0f);
+           char gameOverText[100];
+           sprintf(gameOverText, "GAME OVER! Final Score: %d - Press 'E' to restart", g_playerScore);
+           
+           // Need to undo the translation for game over text to show on screen
+           CV::translate(g_tanque->position.x - screenWidth/2, g_tanque->position.y - screenHeight/2);
+           CV::text(screenWidth/2 - 180, screenHeight/2, gameOverText);
+           CV::translate(-g_tanque->position.x + screenWidth/2, -g_tanque->position.y + screenHeight/2);
+       }
+       
        g_tanque->Render();
    } else if (g_editorMode && g_tanque) {
         // Optionally render tank statically in editor mode or hide it
@@ -181,10 +323,12 @@ void keyboard(int key)
       case 'E':
           g_editorMode = !g_editorMode;
           if (!g_editorMode) {
-              // Reset/reinitialize game state if needed when exiting editor
+              // Reset game state when exiting editor
               if(g_track) g_track->deselectControlPoint();
               // Reset tank to track start when exiting editor mode
               resetTankToTrackStart(g_tanque, g_track);
+              // Reset score, tank health, and targets
+              ResetGameState(g_tanque, g_track);
           } else {
               keyA_down = false;
               keyD_down = false;
@@ -252,6 +396,15 @@ void mouse(int button, int state, int wheel, int direction, int x, int y)
                g_mousePressed = false;
                // Optional: deselect point on release if not dragging, or keep selected
                // g_track->deselectControlPoint();
+           }
+       }
+   }
+   else if (!g_editorMode && g_tanque) {
+       if (button == 0 && state == 0) { // Left mouse button pressed
+           // Fire projectile using the tank's current turret angle (no teleporting)
+           bool fired = g_tanque->FireProjectile();
+           if (fired) {
+               printf("Tank fired projectile!\n");
            }
        }
    }
@@ -373,11 +526,16 @@ void resetTankToTrackStart(Tanque* tanque, BSplineTrack* track) {
 
 int main(void)
 {
-   g_tanque = new Tanque(screenWidth / 4.0f, screenHeight / 2.0f, 0.7f, 0.02f); // Adjusted rotation rate from 0.05f to 0.1f
-   g_track = new BSplineTrack(true); // Track is a loop, trackWidth removed
+   srand(static_cast<unsigned int>(time(NULL))); // Initialize random seed
+   
+   g_tanque = new Tanque(screenWidth / 4.0f, screenHeight / 2.0f, 0.7f, 0.02f);
+   g_track = new BSplineTrack(true);
 
    // Reset tank to the start of the track after creation
    resetTankToTrackStart(g_tanque, g_track);
+   
+   // Initialize targets
+   InitializeTargets(g_track);
 
    CV::init(&screenWidth, &screenHeight, "Tanque B-Spline - Editor: E, Switch: S, Add/Remove: +/-");
    glutMotionFunc(motion); // Register mouse drag callback

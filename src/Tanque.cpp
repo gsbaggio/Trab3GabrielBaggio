@@ -27,9 +27,28 @@ Tanque::Tanque(float x, float y, float initialSpeed, float initialRotationRate) 
     lastSafePosition = position;
     isColliding = false;
     collisionTimer = 0;
+    
+    // Initialize projectile related members
+    firingCooldown = 0;
+    firingCooldownReset = 45; // ~0.75 seconds at 60fps
+    projectileSpeed = 7.0f;
+    
+    // Initialize health related members
+    health = 100;
+    maxHealth = 100;
+    isInvulnerable = false;
+    invulnerabilityTimer = 0;
 }
 
 void Tanque::Update(float mouseX, float mouseY, bool rotateLeft, bool rotateRight, BSplineTrack* track) {
+    // Decrease firing cooldown if active
+    if (firingCooldown > 0) {
+        firingCooldown--;
+    }
+    
+    // Update projectiles
+    UpdateProjectiles(track);
+
     if (isColliding) {
         // Rebound movement
         position.x -= forwardVector.x * speed * REBOUND_SPEED_FACTOR;
@@ -37,7 +56,7 @@ void Tanque::Update(float mouseX, float mouseY, bool rotateLeft, bool rotateRigh
         collisionTimer--;
         if (collisionTimer <= 0) {
             isColliding = false;
-            printf("Rebound finished.\\\\n");
+            printf("Rebound finished.\n");
         }
 
         // Turret can still aim during rebound
@@ -128,7 +147,21 @@ void Tanque::Update(float mouseX, float mouseY, bool rotateLeft, bool rotateRigh
 }
 
 void Tanque::Render() {
-    CV::color(0.2f, 0.5f, 0.2f); // Dark green for base
+    // Render projectiles first (so tank appears above them)
+    for (auto& proj : projectiles) {
+        proj.Render();
+    }
+
+    // Use a flash effect when tank is invulnerable (hit)
+    if (isInvulnerable) {
+        if ((invulnerabilityTimer / 5) % 2 == 0) {
+            CV::color(1.0f, 0.2f, 0.2f); // Red flash
+        } else {
+            CV::color(0.2f, 0.5f, 0.2f); // Normal green
+        }
+    } else {
+        CV::color(0.2f, 0.5f, 0.2f); // Normal green
+    }
 
     // Render Base (Rectangle)
     // We need to draw the rectangle rotated around its center (position)
@@ -214,9 +247,67 @@ void Tanque::Render() {
     // Draw the movement vector line
     CV::color(1, 0, 0); // Red for movement vector
     CV::line(position.x, position.y, position.x + forwardVector.x * 50, position.y + forwardVector.y * 50); // Length 50 for visibility
+    
+    // Draw cooldown indicator if cooling down
+    if (firingCooldown > 0) {
+        float cooldownFraction = (float)firingCooldown / firingCooldownReset;
+        float barLength = 25.0f * cooldownFraction;
+        CV::color(1.0f, 0.3f, 0.3f); // Red cooldown bar
+        CV::rectFill(position.x - 12.5f, position.y - turretRadius - 10, position.x - 12.5f + barLength, position.y - turretRadius - 5);
+    }
 }
 
-// New method for collision detection and response
+// New method for firing projectiles
+bool Tanque::FireProjectile() {
+    if (firingCooldown > 0) {
+        return false; // Can't fire yet
+    }
+    
+    // Get the position of the cannon tip
+    Vector2 cannonTip = GetCannonTipPosition();
+    
+    // Create velocity vector based on cannon direction
+    Vector2 projectileVelocity(cos(topAngle) * projectileSpeed, sin(topAngle) * projectileSpeed);
+    
+    // Create and add the projectile
+    Projectile newProjectile(cannonTip, projectileVelocity);
+    projectiles.push_back(newProjectile);
+    
+    // Reset cooldown
+    firingCooldown = firingCooldownReset;
+    
+    return true;
+}
+
+// Helper to calculate the position of the cannon tip
+Vector2 Tanque::GetCannonTipPosition() const {
+    return Vector2(
+        position.x + cos(topAngle) * cannonLength,
+        position.y + sin(topAngle) * cannonLength
+    );
+}
+
+// New method to update projectiles
+void Tanque::UpdateProjectiles(BSplineTrack* track) {
+    // Update each projectile and check for collisions
+    for (auto& proj : projectiles) {
+        if (proj.active) {
+            proj.Update();
+            proj.CheckCollisionWithTrack(track);
+        }
+    }
+    
+    // Remove inactive projectiles (using erase-remove idiom)
+    projectiles.erase(
+        std::remove_if(
+            projectiles.begin(), 
+            projectiles.end(),
+            [](const Projectile& p) { return !p.active; }
+        ),
+        projectiles.end()
+    );
+}
+
 void Tanque::CheckCollisionAndRespond(BSplineTrack* track) {
     if (!track) {
         this->isColliding = false;
@@ -297,5 +388,36 @@ void Tanque::CheckCollisionAndRespond(BSplineTrack* track) {
         // No new collision detected by this check.
         // If isColliding was true due to an ongoing rebound, Update() handles the timer.
         // If timer runs out, Update() sets isColliding = false.
+    }
+}
+
+// New method to check for collisions with targets
+void Tanque::CheckTargetCollisions(std::vector<Target>& targets) {
+    // Skip if tank is currently invulnerable
+    if (isInvulnerable) {
+        invulnerabilityTimer--;
+        if (invulnerabilityTimer <= 0) {
+            isInvulnerable = false;
+        }
+        return;
+    }
+    
+    // Check each target for collision with the tank
+    for (auto& target : targets) {
+        if (target.active && target.CheckCollisionWithTank(position, baseWidth, baseHeight, baseAngle)) {
+            // Tank takes damage
+            health -= 10; // Decrease health by 10 points
+            if (health < 0) health = 0;
+            
+            // Make tank temporarily invulnerable to prevent multiple rapid hits
+            isInvulnerable = true;
+            invulnerabilityTimer = INVULNERABILITY_FRAMES;
+            
+            // Target takes damage too
+            target.TakeDamage(1);
+            
+            // If we hit any target, we can break the loop since we're now invulnerable
+            break;
+        }
     }
 }
