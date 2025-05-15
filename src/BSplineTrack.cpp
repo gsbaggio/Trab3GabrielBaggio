@@ -305,6 +305,34 @@ void BSplineTrack::Render(bool editorMode) {
             float vy2[3] = {left2.y, right1.y, right2.y};
             CV::triangleFill(vx2, vy2);
         }
+        
+        // Add a yellow dotted line in the center of the track
+        CV::color(1.0f, 1.0f, 0.0f); // Bright yellow
+        
+        const int dash_length = 3;  // Reduced from 10 to 5 (shorter dashes)
+        const int space_length = 2; // Reduced from 10 to 5 (more frequent dashes)
+        
+        // Calculate and draw the centerline dashes
+        for (int i = 0; i < fill_steps; i += (dash_length + space_length)) {
+            // For each dash
+            for (int j = i; j < i + dash_length && j < fill_steps; j++) {
+                float t1 = static_cast<float>(j) / fill_steps;
+                float t2 = static_cast<float>(j + 1) / fill_steps;
+                
+                // Get points on both curves
+                Vector2 left1 = getPointOnCurve(t1, CurveSide::Left);
+                Vector2 right1 = getPointOnCurve(t1, CurveSide::Right);
+                Vector2 left2 = getPointOnCurve(t2, CurveSide::Left);
+                Vector2 right2 = getPointOnCurve(t2, CurveSide::Right);
+                
+                // Calculate center points
+                Vector2 center1((left1.x + right1.x) * 0.5f, (left1.y + right1.y) * 0.5f);
+                Vector2 center2((left2.x + right2.x) * 0.5f, (left2.y + right2.y) * 0.5f);
+                
+                // Draw line segment for this part of the dash
+                CV::line(center1.x, center1.y, center2.x, center2.y);
+            }
+        }
     }
     
     // Render left curve boundary (e.g., green boundary)

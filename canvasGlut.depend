@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1747334027 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\gl_canvas2d.cpp
+1747334906 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\gl_canvas2d.cpp
 	"gl_canvas2d.h"
 	<GL/glut.h>
 
@@ -65,7 +65,7 @@
 	"Projectile.h"
 	"Target.h"
 
-1747333041 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\tanque.cpp
+1747334719 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\tanque.cpp
 	"Tanque.h"
 	"gl_canvas2d.h"
 	<cmath>
