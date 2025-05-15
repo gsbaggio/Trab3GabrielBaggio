@@ -42,12 +42,13 @@
 1193164156 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\relogio.h
 	"gl_canvas2d.h"
 
-1747318309 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\main.cpp
+1747321452 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\main.cpp
 	<GL/glut.h>
 	<GL/freeglut_ext.h>
 	<math.h>
 	<stdio.h>
 	<stdlib.h>
+	<time.h>
 	"gl_canvas2d.h"
 	"Relogio.h"
 	"Tanque.h"

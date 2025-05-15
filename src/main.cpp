@@ -120,6 +120,7 @@ void SpawnTarget(BSplineTrack* track) {
         Vector2 position = GenerateRandomTargetPosition(track);
         g_targets[targetIndex].position = position;
         g_targets[targetIndex].active = true;
+        g_targets[targetIndex].health = g_targets[targetIndex].maxHealth; // Reset health when respawning
     }
 }
 
