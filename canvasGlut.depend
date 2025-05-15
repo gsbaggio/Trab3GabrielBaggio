@@ -65,7 +65,7 @@
 	"Projectile.h"
 	"Target.h"
 
-1747331633 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\tanque.cpp
+1747333041 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\tanque.cpp
 	"Tanque.h"
 	"gl_canvas2d.h"
 	<cmath>
@@ -175,7 +175,7 @@
 	"Tanque.h"
 	"BSplineTrack.h"
 
-1747332807 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\projectile.h
+1747333456 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\projectile.h
 	"Vector2.h"
 	"gl_canvas2d.h"
 	"BSplineTrack.h"

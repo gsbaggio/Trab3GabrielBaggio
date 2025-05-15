@@ -17,10 +17,10 @@ public:
     
     Projectile()
         : position(0, 0), previousPosition(0, 0), velocity(0, 0), 
-          active(false), lifetime(300), collisionRadius(12.0f) { // Increased from 8.0f to 12.0f
+          active(false), lifetime(300), collisionRadius(8.0f) { // Increased from 8.0f to 12.0f
     }
 
-    Projectile(const Vector2& pos, const Vector2& vel, float radius = 8.0f) // Increased default from 4.0f to 8.0f
+    Projectile(const Vector2& pos, const Vector2& vel, float radius = 4.0f) // Increased default from 4.0f to 8.0f
         : position(pos), previousPosition(pos), velocity(vel), 
           active(true), lifetime(300), collisionRadius(radius) {
     }
@@ -47,40 +47,64 @@ public:
         if (!active || !track) return;
         
         // Get closest points on both track boundaries for current position
-        ClosestPointInfo cpiLeftCurrent = track->findClosestPointOnCurve(position, CurveSide::Left);
-        ClosestPointInfo cpiRightCurrent = track->findClosestPointOnCurve(position, CurveSide::Right);
-        
-        // Check collision with current position and boundaries
-        if (cpiLeftCurrent.isValid && cpiLeftCurrent.distance < collisionRadius) {
-            active = false;
-            return;
+        ClosestPointInfo cpiLeft = track->findClosestPointOnCurve(position, CurveSide::Left);
+        ClosestPointInfo cpiRight = track->findClosestPointOnCurve(position, CurveSide::Right);
+
+        // Check collision with left boundary using normal projection
+        if (cpiLeft.isValid) {
+            Vector2 vec_proj_to_cl_point = position - cpiLeft.point;
+            float projection = vec_proj_to_cl_point.x * cpiLeft.normal.x + vec_proj_to_cl_point.y * cpiLeft.normal.y;
+            
+            // If projection is positive, projectile is outside the left boundary.
+            // If the projection is less than the collision radius, it's colliding with the boundary
+            if (projection > 0.0f && projection < collisionRadius) {
+                active = false;
+                return;
+            }
+        }
+
+        // Check collision with right boundary using normal projection
+        if (cpiRight.isValid) {
+            Vector2 vec_proj_to_cr_point = position - cpiRight.point;
+            float projection = vec_proj_to_cr_point.x * cpiRight.normal.x + vec_proj_to_cr_point.y * cpiRight.normal.y;
+            
+            // If projection is negative, projectile is outside the right boundary.
+            // If the absolute value of the projection is less than the collision radius, it's colliding
+            if (projection < 0.0f && std::abs(projection) < collisionRadius) {
+                active = false;
+                return;
+            }
         }
         
-        if (cpiRightCurrent.isValid && cpiRightCurrent.distance < collisionRadius) {
-            active = false;
-            return;
-        }
-        
-        // If moving fast, also check for "tunneling" through boundaries by sampling points along movement path
+        // If moving fast, check for "tunneling" through boundaries by sampling points along movement path
         float movementLength = (position - previousPosition).length();
-        if (movementLength > collisionRadius * 1.5f) {
-            const int numSamples = 5; // Sample a few points along the movement path
+        if (movementLength > collisionRadius) {
+            // The faster the projectile, the more samples we need
+            int numSamples = std::max(5, static_cast<int>(movementLength / (collisionRadius * 0.5f)));
             
             for (int i = 1; i < numSamples; i++) {
                 float t = static_cast<float>(i) / numSamples;
                 Vector2 samplePos = previousPosition + (position - previousPosition) * t;
                 
-                // Check sample point against both boundaries
+                // Check sample points against both boundaries using same method as above
                 ClosestPointInfo cpiLeftSample = track->findClosestPointOnCurve(samplePos, CurveSide::Left);
-                if (cpiLeftSample.isValid && cpiLeftSample.distance < collisionRadius) {
-                    active = false;
-                    return;
+                if (cpiLeftSample.isValid) {
+                    Vector2 vecSample = samplePos - cpiLeftSample.point;
+                    float projSample = vecSample.x * cpiLeftSample.normal.x + vecSample.y * cpiLeftSample.normal.y;
+                    if (projSample > 0.0f && projSample < collisionRadius) {
+                        active = false;
+                        return;
+                    }
                 }
                 
                 ClosestPointInfo cpiRightSample = track->findClosestPointOnCurve(samplePos, CurveSide::Right);
-                if (cpiRightSample.isValid && cpiRightSample.distance < collisionRadius) {
-                    active = false;
-                    return;
+                if (cpiRightSample.isValid) {
+                    Vector2 vecSample = samplePos - cpiRightSample.point;
+                    float projSample = vecSample.x * cpiRightSample.normal.x + vecSample.y * cpiRightSample.normal.y;
+                    if (projSample < 0.0f && std::abs(projSample) < collisionRadius) {
+                        active = false;
+                        return;
+                    }
                 }
             }
         }
