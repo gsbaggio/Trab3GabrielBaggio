@@ -39,6 +39,9 @@ Tanque::Tanque(float x, float y, float initialSpeed, float initialRotationRate) 
     maxHealth = 100;
     isInvulnerable = false;
     invulnerabilityTimer = 0;
+
+    // Initialize shield
+    hasShield = false;
 }
 
 void Tanque::Update(float mouseX, float mouseY, bool rotateLeft, bool rotateRight, BSplineTrack* track) {

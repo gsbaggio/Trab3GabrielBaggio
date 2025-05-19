@@ -12,6 +12,7 @@
 #include "BSplineTrack.h"
 #include "Target.h" 
 #include "Projectile.h" 
+#include "PowerUp.h" // New include for power-ups
 
 void motion(int x, int y);
 void resetTankToTrackStart(Tanque* tanque, BSplineTrack* track); // Forward declaration
@@ -39,6 +40,13 @@ std::vector<Target> g_targets;
 int g_playerScore = 0;
 int g_gameLevel = 1;  // Current game level
 int g_destroyedTargets = 0;  // Counter for destroyed targets in current level
+
+// Global variables for power-ups
+PowerUp g_powerUp;
+PowerUpType g_storedPowerUp = PowerUpType::None;
+
+// Function declarations
+void SpawnPowerUp(BSplineTrack* track); // Add this forward declaration
 
 // Modified function to avoid respawning near the tank or previous position
 Vector2 GenerateRandomTargetPosition(BSplineTrack* track, const Vector2& avoidPosition = Vector2(0,0), bool checkAvoidance = false) {
@@ -170,6 +178,32 @@ void InitializeTargets(BSplineTrack* track) {
     
     printf("Level %d started with %d targets (%d shooters, %d stars)\n", 
            g_gameLevel, NUM_TARGETS, shooterCount, starCount);
+           
+    // Always spawn a power-up when initializing targets if none exists
+    SpawnPowerUp(track);
+}
+
+// Function to spawn a random power-up
+void SpawnPowerUp(BSplineTrack* track) {
+    // Only spawn if no active power-up exists and no stored power-up
+    if (g_powerUp.active || g_storedPowerUp != PowerUpType::None) return;
+    
+    if (!track || track->controlPointsLeft.size() < 4 || track->controlPointsRight.size() < 4) {
+        printf("Warning: Cannot spawn power-up, track is not properly initialized\n");
+        return;
+    }
+    
+    // Generate a random position on the track
+    Vector2 position = GenerateRandomTargetPosition(track, g_tanque->position, true);
+    
+    // Choose a random power-up type
+    int randType = rand() % 3 + 1; // 1-3
+    PowerUpType type = static_cast<PowerUpType>(randType);
+    
+    // Create and activate the power-up
+    g_powerUp = PowerUp(position, type);
+    printf("PowerUp spawned: %s at position (%.1f, %.1f)\n", 
+           PowerUp::GetTypeName(type), position.x, position.y);
 }
 
 // Function to reset the game state
@@ -187,10 +221,50 @@ void ResetGameState(Tanque* tanque, BSplineTrack* track) {
 
     InitializeTargets(track);
 
-    // Any additional reset logic goes here
+    // Reset power-ups
+    g_powerUp.active = false;
+    g_storedPowerUp = PowerUpType::None;
+    
+    // Spawn a new power-up
+    SpawnPowerUp(track);
 }
 
-
+// Implement UsePowerUp function
+void UsePowerUp(Tanque* tank, std::vector<Target>& targets) {
+    if (!tank || g_storedPowerUp == PowerUpType::None) return;
+    
+    switch (g_storedPowerUp) {
+        case PowerUpType::Health:
+            PowerUp::ApplyHealthEffect(tank);
+            break;
+            
+        case PowerUpType::Shield:
+            PowerUp::ApplyShieldEffect(tank);
+            break;
+            
+        case PowerUpType::Laser: {
+            int targetsDestroyed = PowerUp::ApplyLaserEffect(tank, targets);
+            
+            // Update score and destroyed targets count for each destroyed target
+            g_playerScore += targetsDestroyed * 100;
+            g_destroyedTargets += targetsDestroyed;
+            
+            // Check if all targets have been destroyed
+            if (g_destroyedTargets >= NUM_TARGETS) {
+                // Level complete - advance to next level
+                g_gameLevel++;
+                InitializeTargets(g_track);
+            }
+            break;
+        }
+        
+        default:
+            break;
+    }
+    
+    // Clear the stored power-up after use
+    g_storedPowerUp = PowerUpType::None;
+}
 
 //funcao chamada continuamente. Deve-se controlar o que desenhar por meio de variaveis globais
 //Todos os comandos para desenho na canvas devem ser chamados dentro da render().
@@ -199,14 +273,18 @@ void render()
 {
    CV::clear(0.25f, 0.25f, 0.3f); // Changed to dark asphalt gray (former road color)
 
-
-
    if(!g_editorMode){
     CV::translate(-g_tanque->position.x + screenWidth/2, -g_tanque->position.y + screenHeight/2);
    }
 
    if (g_track) {
        g_track->Render(g_editorMode);
+   }
+   
+   // Update and render power-up - MOVED HERE for proper rendering order
+   if (!g_editorMode) {
+       g_powerUp.Update();
+       g_powerUp.Render();
    }
 
    // Render targets
@@ -228,8 +306,18 @@ void render()
            target.Update(g_tanque->position, g_track);
        }
 
-       // Check for star targets directly hitting the tank
+       // Check if tank collects power-up
+       if (g_powerUp.active && g_powerUp.CheckCollection(g_tanque->position, g_tanque->baseWidth/2.0f)) {
+           // Store the power-up type and deactivate the power-up
+           g_storedPowerUp = g_powerUp.type;
+           g_powerUp.active = false;
+           
+           printf("PowerUp collected: %s\n", PowerUp::GetTypeName(g_storedPowerUp));
+       }
+       
+       // Check for shielded tank when taking damage
        if (!g_tanque->isInvulnerable) {
+           // Check for star targets hitting the tank
            for (size_t i = 0; i < g_targets.size(); i++) {
                Target& target = g_targets[i];
                if (target.active && target.type == TargetType::Star) {
@@ -385,14 +473,26 @@ void render()
        g_tanque->Render(); // Render the tank statically
    }
 
+      
    // Draw player score at top-left (BEFORE translate to keep it fixed on screen)
    char scoreText[100]; // Increased buffer size to accommodate level information
+   char powerText[100];
    if(!g_editorMode){
     CV::translate(0, 0);
     sprintf(scoreText, "Score: %d | Level: %d | Targets: %d/%d", 
             g_playerScore, g_gameLevel, g_destroyedTargets, NUM_TARGETS);
     CV::color(1.0f, 1.0f, 1.0f);
     CV::text(10, 40, scoreText);
+    
+    // Display stored power-up info
+    sprintf(powerText, "PowerUp: %s", PowerUp::GetTypeName(g_storedPowerUp));
+    CV::text(10, 60, powerText);
+    
+    // Display shield status if active
+    if (g_tanque && g_tanque->hasShield) {
+        CV::color(0.3f, 0.3f, 1.0f);
+        CV::text(10, 80, "Shield Active");
+    }
 
     CV::text(10, 20, "Modo de Jogo | A/D = Girar | 'E' = Editor | 'M1' = Tiro | 'M2' = Poder");
    }
@@ -499,6 +599,10 @@ void mouse(int button, int state, int wheel, int direction, int x, int y)
                printf("Tank fired projectile!\n");
            }
        }
+       else if (button == 2 && state == 0) { // Right mouse button pressed
+            // Use stored power-up
+            UsePowerUp(g_tanque, g_targets);
+        }
    }
 
    if (g_editorMode && g_track && g_mousePressed && g_track->selectedPointIndex != -1) {
@@ -628,6 +732,11 @@ int main(void)
 
    // Initialize targets
    InitializeTargets(g_track);
+
+   // Make sure a power-up spawns at start
+   if (!g_powerUp.active) {
+       SpawnPowerUp(g_track);
+   }
 
    CV::init(&screenWidth, &screenHeight, "Tanque B-Spline - Editor: E, Switch: S, Add/Remove: +/-");
    glutMotionFunc(motion); // Register mouse drag callback

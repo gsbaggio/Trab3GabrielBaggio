@@ -133,14 +133,14 @@
 1747262914 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\relogio.h
 	"gl_canvas2d.h"
 
-1747692997 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\tanque.cpp
+1747695184 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\tanque.cpp
 	"Tanque.h"
 	"gl_canvas2d.h"
 	<cmath>
 	<algorithm>
 	"BSplineTrack.h"
 
-1747689592 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\tanque.h
+1747695184 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\tanque.h
 	"gl_canvas2d.h"
 	"Vector2.h"
 	<cmath>
@@ -168,7 +168,7 @@
 	<string>
 	<cfloat>
 
-1747693513 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\main.cpp
+1747695184 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\main.cpp
 	<GL/glut.h>
 	<GL/freeglut_ext.h>
 	<math.h>
@@ -180,6 +180,7 @@
 	"BSplineTrack.h"
 	"Target.h"
 	"Projectile.h"
+	"PowerUp.h"
 
 1747662486 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\projectile.h
 	"Vector2.h"
@@ -219,9 +220,21 @@
 	<algorithm>
 	<vector>
 
-1747693507 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\target.cpp
+1747694310 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\target.cpp
 	"Target.h"
 	"BSplineTrack.h"
 	<cmath>
 	<algorithm>
+
+1747695399 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\powerup.h
+	"Vector2.h"
+	"gl_canvas2d.h"
+	<cmath>
+	<vector>
+
+1747695399 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\powerup.cpp
+	"PowerUp.h"
+	"Tanque.h"
+	"Target.h"
+	<cmath>
 

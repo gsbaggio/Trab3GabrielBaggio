@@ -54,6 +54,9 @@ public:
     int invulnerabilityTimer;
     static const int INVULNERABILITY_FRAMES = 60; // 1 second at 60fps
 
+    // Add shield property
+    bool hasShield;
+
     Tanque(float x, float y, float initialSpeed = 1.0f, float initialRotationRate = 0.03f);
 
     void Update(float mouseX, float mouseY, bool rotateLeft, bool rotateRight, BSplineTrack* track);
