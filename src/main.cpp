@@ -513,10 +513,10 @@ void render()
     sprintf(powerText, "PowerUp: %s", PowerUp::GetTypeName(g_storedPowerUp));
     CV::text(10, 60, powerText);
 
-    // Display shield status if active
+    // Remove the shield text display since shield is shown visually on the tank
+    // Note: We keep the check for consistency but just don't display the text
     if (g_tanque && g_tanque->hasShield) {
-        CV::color(0.3f, 0.3f, 1.0f);
-        CV::text(10, 80, "Shield Active");
+        // Shield is now displayed visually on the tank
     }
 
     CV::text(10, 20, "Modo de Jogo | A/D = Girar | 'E' = Editor | 'M1' = Tiro | 'M2' = Poder");

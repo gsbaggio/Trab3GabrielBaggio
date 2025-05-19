@@ -28,12 +28,12 @@ Tanque::Tanque(float x, float y, float initialSpeed, float initialRotationRate) 
     lastSafePosition = position;
     isColliding = false;
     collisionTimer = 0;
-    
+
     // Initialize projectile related members
     firingCooldown = 0;
     firingCooldownReset = 45; // ~0.75 seconds at 60fps
     projectileSpeed = 3.5f;  // Decreased from 7.0f to 4.0f
-    
+
     // Initialize health related members
     health = 100;
     maxHealth = 100;
@@ -50,7 +50,7 @@ void Tanque::Update(float mouseX, float mouseY, bool rotateLeft, bool rotateRigh
     if (firingCooldown > 0) {
         firingCooldown--;
     }
-    
+
     // Update projectiles
     UpdateProjectiles(track);
 
@@ -73,7 +73,7 @@ void Tanque::Update(float mouseX, float mouseY, bool rotateLeft, bool rotateRigh
         float angleDifference_turret = targetAngle_turret - currentTopAngle_turret;
         if (angleDifference_turret > M_PI) angleDifference_turret -= 2 * M_PI;
         else if (angleDifference_turret < -M_PI) angleDifference_turret += 2 * M_PI;
-        
+
         float maxRotationThisFrame_turret = turretRotationSpeed; // Assuming per-frame
 
         if (std::abs(angleDifference_turret) <= maxRotationThisFrame_turret) {
@@ -83,7 +83,7 @@ void Tanque::Update(float mouseX, float mouseY, bool rotateLeft, bool rotateRigh
         }
         topAngle = fmod(topAngle, 2 * M_PI);
         if (topAngle < 0) topAngle += 2 * M_PI;
-        
+
         return; // Skip normal movement and new collision checks
     }
 
@@ -162,12 +162,12 @@ void Tanque::Render() {
     float healthBarHeight = 5.0f;
     float healthBarY = position.y + baseHeight / 2.0f + 5.0f; // Position below the tank instead of above
     float healthPercent = static_cast<float>(health) / maxHealth;
-    
+
     // Health bar background (red)
     CV::color(1.0f, 0.2f, 0.2f);
     CV::rectFill(position.x - healthBarWidth / 2.0f, healthBarY,
                 position.x + healthBarWidth / 2.0f, healthBarY + healthBarHeight);
-    
+
     // Health bar fill (green)
     CV::color(0.2f, 0.8f, 0.2f);
     CV::rectFill(position.x - healthBarWidth / 2.0f, healthBarY,
@@ -212,7 +212,13 @@ void Tanque::Render() {
     float vy_base[4] = {p1_world.y, p2_world.y, p3_world.y, p4_world.y};
     CV::polygonFill(vx_base, vy_base, 4);
 
-   
+    // Draw shield visualization if tank has a shield
+    CV::color(0.0f, 0.0f, 1.0f); // Blue color for shield
+    if (hasShield) {
+        for(int side = 0; side < 4; side++){
+            CV::line(vx_base[side], vy_base[side], vx_base[(side + 1) % 4], vy_base[(side + 1) % 4]);
+        }
+    }
 
     // Render Top (Turret - Circle and Cannon - Rectangle)
     CV::color(0.1f, 0.3f, 0.1f); // Darker green for turret
@@ -240,7 +246,7 @@ void Tanque::Render() {
     float vy_cannon[4] = {c1.y, c2.y, c4.y, c3.y};
     CV::polygonFill(vx_cannon, vy_cannon, 4);
 
-   
+
     // Draw cooldown indicator if cooling down
     if (firingCooldown > 0) {
         float cooldownFraction = (float)firingCooldown / firingCooldownReset;
@@ -255,20 +261,20 @@ bool Tanque::FireProjectile() {
     if (firingCooldown > 0) {
         return false; // Can't fire yet
     }
-    
+
     // Get the position of the cannon tip
     Vector2 cannonTip = GetCannonTipPosition();
-    
+
     // Create velocity vector based on cannon direction
     Vector2 projectileVelocity(cos(topAngle) * projectileSpeed, sin(topAngle) * projectileSpeed);
-    
+
     // Create and add the projectile
     Projectile newProjectile(cannonTip, projectileVelocity);
     projectiles.push_back(newProjectile);
-    
+
     // Reset cooldown
     firingCooldown = firingCooldownReset;
-    
+
     return true;
 }
 
@@ -289,11 +295,11 @@ void Tanque::UpdateProjectiles(BSplineTrack* track) {
             proj.CheckCollisionWithTrack(track);
         }
     }
-    
+
     // Remove inactive projectiles (using erase-remove idiom)
     projectiles.erase(
         std::remove_if(
-            projectiles.begin(), 
+            projectiles.begin(),
             projectiles.end(),
             [](const Projectile& p) { return !p.active; }
         ),
@@ -309,7 +315,7 @@ void Tanque::CheckCollisionAndRespond(BSplineTrack* track) {
 
     // Skip health damage if the tank is already invulnerable
     bool canTakeDamage = !isInvulnerable;
-    
+
     Vector2 currentTankPosition = this->position; // Current tentative position of the tank's center
 
     // Calculate tank's world corners based on currentTankPosition and baseAngle
@@ -359,7 +365,7 @@ void Tanque::CheckCollisionAndRespond(BSplineTrack* track) {
         // A collision occurs if any tank corner is to the "right" of the RightCurve.
         // This means the projection of (corner - closest_point_on_curve) onto normal_R should be negative.
         // We look for the most negative projection (min_projection_right).
-        float min_projection_right = FLT_MAX; 
+        float min_projection_right = FLT_MAX;
         for (int i = 0; i < 4; ++i) {
             Vector2 vec_corner_to_cr_point = world_corners[i] - cpiRight.point;
             float projection = vec_corner_to_cr_point.x * cpiRight.normal.x + vec_corner_to_cr_point.y * cpiRight.normal.y;
@@ -369,7 +375,7 @@ void Tanque::CheckCollisionAndRespond(BSplineTrack* track) {
         }
         // If the smallest projection (most "to the right" relative to N_R) is negative,
         // it means a part of the tank is to the right of the RightCurve (outside the track).
-        if (min_projection_right < 0.0f) { 
+        if (min_projection_right < 0.0f) {
             collisionThisFrame = true;
         }
     }
@@ -378,7 +384,7 @@ void Tanque::CheckCollisionAndRespond(BSplineTrack* track) {
         this->isColliding = true;
         this->collisionTimer = COLLISION_REBOUND_FRAMES;
         this->position = this->lastSafePosition; // Revert to last known safe position
-        
+
         // Only apply damage if the tank isn't already invulnerable
         if (canTakeDamage) {
             // Check if we have a shield to block the damage
@@ -394,7 +400,7 @@ void Tanque::CheckCollisionAndRespond(BSplineTrack* track) {
                 int damageTaken = maxHealth / 4;  // 25% of max health
                 health -= damageTaken;
                 if (health < 0) health = 0;
-                
+
                 // Make tank temporarily invulnerable and flash (just like with target collisions)
                 isInvulnerable = true;
                 isShieldInvulnerable = false; // Regular damage
@@ -419,14 +425,14 @@ int Tanque::CheckTargetCollisions(std::vector<Target>& targets) {
         }
         return -1;
     }
-    
+
     // Check each target for collision with the tank
     for (size_t i = 0; i < targets.size(); i++) {
         // Skip Star type targets as they are handled separately in the main render loop
         if (targets[i].type == TargetType::Star) {
             continue;
         }
-        
+
         if (targets[i].active && targets[i].CheckCollisionWithTank(position, baseWidth, baseHeight, baseAngle)) {
             // Check if we have a shield to block the damage
             if (hasShield) {
@@ -436,10 +442,10 @@ int Tanque::CheckTargetCollisions(std::vector<Target>& targets) {
                 isShieldInvulnerable = true; // Set flag for shield invulnerability
                 invulnerabilityTimer = INVULNERABILITY_FRAMES;
                 printf("Shield blocked damage from target collision!\n");
-                
+
                 // Target takes damage and should be destroyed when hitting a shield
                 targets[i].TakeDamage(targets[i].health); // Kill the target by dealing its full health
-                
+
                 // Check if target was destroyed by this collision
                 if (!targets[i].active) {
                     return i; // Return the index of the destroyed target
@@ -449,39 +455,39 @@ int Tanque::CheckTargetCollisions(std::vector<Target>& targets) {
                 int damageTaken = maxHealth / 4;  // 25% of max health
                 health -= damageTaken;
                 if (health < 0) health = 0;
-                
+
                 // Make tank temporarily invulnerable to prevent multiple rapid hits
                 isInvulnerable = true;
                 isShieldInvulnerable = false; // Regular damage
                 invulnerabilityTimer = INVULNERABILITY_FRAMES;
-                
+
                 // Target takes damage too
                 targets[i].TakeDamage(1);
-                
+
                 // Check if target was destroyed by this collision
                 if (!targets[i].active) {
                     return i; // Return the index of the destroyed target
                 }
             }
-            
+
             // If we hit any target, we can break the loop since we're now invulnerable
             break;
         }
     }
-    
+
     return -1; // Return -1 if no target was destroyed
 }
 
 // Add the missing implementations from Tanque.h
 int Tanque::CheckProjectileTargetCollision(const Projectile& proj, std::vector<Target>& targets) {
     if (!proj.active) return -1;
-    
+
     for (size_t i = 0; i < targets.size(); i++) {
         if (targets[i].active && targets[i].CheckCollision(proj.position)) {
             return static_cast<int>(i);
         }
     }
-    
+
     return -1;
 }
 
@@ -494,7 +500,7 @@ bool Tanque::CheckAllProjectilesAgainstTargets(std::vector<Target>& targets, int
             return true;
         }
     }
-    
+
     hitTargetIndex = -1;
     hitProjectileIndex = -1;
     return false;
