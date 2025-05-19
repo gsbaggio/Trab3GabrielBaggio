@@ -6,8 +6,9 @@
 #include <cmath>
 #include <vector>
 #include "BSplineTrack.h"
-#include "Projectile.h" // Include updated Projectile header
-#include "Target.h"     // Include new Target header
+#include "Projectile.h"
+#include "Target.h"
+#include "ExplosionManager.h" // Include ExplosionManager header
 
 // Define M_PI if not available (common on Windows with MSVC)
 #ifndef M_PI
@@ -57,6 +58,9 @@ public:
 
     // Add shield property
     bool hasShield;
+
+    // Add explosion manager
+    ExplosionManager explosions;
 
     Tanque(float x, float y, float initialSpeed = 1.0f, float initialRotationRate = 0.03f);
 

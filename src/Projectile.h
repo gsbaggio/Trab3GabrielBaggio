@@ -6,6 +6,9 @@
 #include "BSplineTrack.h"
 #include <cmath>
 
+// Forward declaration
+class ExplosionManager;
+
 class Projectile {
 public:
     Vector2 position;
@@ -23,7 +26,11 @@ public:
     
     void Render();
     
-    void CheckCollisionWithTrack(BSplineTrack* track);
+    // Updated to accept ExplosionManager to create explosions
+    bool CheckCollisionWithTrack(BSplineTrack* track, ExplosionManager* explosions = nullptr);
+    
+    // Helper to create explosion
+    void CreateExplosionOnCollision(ExplosionManager* explosions);
 };
 
 #endif

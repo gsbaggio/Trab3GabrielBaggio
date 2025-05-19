@@ -1,4 +1,5 @@
 #include "Projectile.h"
+#include "ExplosionManager.h"
 #include <cmath>
 
 Projectile::Projectile()
@@ -29,23 +30,27 @@ void Projectile::Render() {
     CV::circleFill(position.x, position.y, 8.0f, 10); // Increased from 4.0f to 8.0f to match larger collision
 }
 
-void Projectile::CheckCollisionWithTrack(BSplineTrack* track) {
-    if (!active || !track) return;
+bool Projectile::CheckCollisionWithTrack(BSplineTrack* track, ExplosionManager* explosions) {
+    if (!active || !track) return false;
     
     // Get closest points on both track boundaries for current position
-    ClosestPointInfo cpiLeftCurrent = track->findClosestPointOnCurve(position, CurveSide::Left); // Renamed cpiLeft to cpiLeftCurrent
-    ClosestPointInfo cpiRightCurrent = track->findClosestPointOnCurve(position, CurveSide::Right); // Renamed cpiRight to cpiRightCurrent
+    ClosestPointInfo cpiLeftCurrent = track->findClosestPointOnCurve(position, CurveSide::Left);
+    ClosestPointInfo cpiRightCurrent = track->findClosestPointOnCurve(position, CurveSide::Right);
     
     // Check collision with current position and boundaries
-    if (cpiLeftCurrent.isValid) { // Used cpiLeftCurrent
-        Vector2 vec_proj_to_cl_point = position - cpiLeftCurrent.point; // Used cpiLeftCurrent
-        float projection = vec_proj_to_cl_point.x * cpiLeftCurrent.normal.x + vec_proj_to_cl_point.y * cpiLeftCurrent.normal.y; // Used cpiLeftCurrent
+    if (cpiLeftCurrent.isValid) {
+        Vector2 vec_proj_to_cl_point = position - cpiLeftCurrent.point;
+        float projection = vec_proj_to_cl_point.x * cpiLeftCurrent.normal.x + vec_proj_to_cl_point.y * cpiLeftCurrent.normal.y;
             
         // If projection is positive, projectile is outside the left boundary.
         // If the projection is less than the collision radius, it's colliding with the boundary
-        if (projection > 0.0f && projection < collisionRadius) { // Added missing code block
+        if (projection > 0.0f && projection < collisionRadius) {
             active = false;
-            return;
+            // Create explosion at collision point
+            if (explosions) {
+                CreateExplosionOnCollision(explosions);
+            }
+            return true;
         }
     }
     
@@ -57,7 +62,11 @@ void Projectile::CheckCollisionWithTrack(BSplineTrack* track) {
         // If the absolute value of projection is less than the collision radius, it's colliding
         if (projection < 0.0f && std::abs(projection) < collisionRadius) { // Added missing code block and std::abs
             active = false;
-            return;
+            // Create explosion at collision point
+            if (explosions) {
+                CreateExplosionOnCollision(explosions);
+            }
+            return true;
         }
     }
     
@@ -74,14 +83,23 @@ void Projectile::CheckCollisionWithTrack(BSplineTrack* track) {
             ClosestPointInfo cpiLeftSample = track->findClosestPointOnCurve(samplePos, CurveSide::Left);
             if (cpiLeftSample.isValid && cpiLeftSample.distance < collisionRadius) {
                 active = false;
-                return;
+                return true;
             }
             
             ClosestPointInfo cpiRightSample = track->findClosestPointOnCurve(samplePos, CurveSide::Right);
             if (cpiRightSample.isValid && cpiRightSample.distance < collisionRadius) {
                 active = false;
-                return;
+                return true;
             }
         }
     }
+    
+    return false;
+}
+
+void Projectile::CreateExplosionOnCollision(ExplosionManager* explosions) {
+    if (!explosions) return;
+    
+    // Create explosion at current position using velocity as direction
+    explosions->CreateExplosion(position, velocity, 30); // 30 particles for rich effect
 }

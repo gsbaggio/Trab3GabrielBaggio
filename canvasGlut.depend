@@ -140,7 +140,7 @@
 	<algorithm>
 	"BSplineTrack.h"
 
-1747696609 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\tanque.h
+1747697406 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\tanque.h
 	"gl_canvas2d.h"
 	"Vector2.h"
 	<cmath>
@@ -148,6 +148,7 @@
 	"BSplineTrack.h"
 	"Projectile.h"
 	"Target.h"
+	"ExplosionManager.h"
 
 1747262914 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\bsplinetrack.h
 	<vector>
@@ -207,7 +208,7 @@
 	"Projectile.h"
 	<cmath>
 
-1747689592 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\projectile.h
+1747697406 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\projectile.h
 	"Vector2.h"
 	"gl_canvas2d.h"
 	"BSplineTrack.h"
@@ -236,5 +237,12 @@
 	"PowerUp.h"
 	"Tanque.h"
 	"Target.h"
+	<cmath>
+
+1747697406 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\explosionmanager.h
+	"Vector2.h"
+	"gl_canvas2d.h"
+	<vector>
+	<cstdlib>
 	<cmath>
 

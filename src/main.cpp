@@ -439,6 +439,16 @@ void render()
        if (g_tanque->CheckAllProjectilesAgainstTargets(g_targets, hitTargetIndex, hitProjectileIndex)) {
            // Apply damage to target when hit by projectile
            if (hitTargetIndex >= 0 && hitTargetIndex < static_cast<int>(g_targets.size())) {
+               // Get target position and projectile velocity before target is damaged
+               Vector2 hitPosition = g_targets[hitTargetIndex].position;
+               Vector2 hitVelocity = Vector2(0, 0);
+               
+               if (hitProjectileIndex >= 0 && hitProjectileIndex < static_cast<int>(g_tanque->projectiles.size())) {
+                   hitVelocity = g_tanque->projectiles[hitProjectileIndex].velocity;
+                   // Create explosion at target hit location
+                   g_tanque->explosions.CreateExplosion(hitPosition, hitVelocity, 25);
+               }
+               
                // Apply damage to the target
                g_targets[hitTargetIndex].TakeDamage(1);
 

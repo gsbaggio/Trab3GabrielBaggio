@@ -54,6 +54,9 @@ void Tanque::Update(float mouseX, float mouseY, bool rotateLeft, bool rotateRigh
     // Update projectiles
     UpdateProjectiles(track);
 
+    // Update explosions
+    explosions.Update();
+
     if (isColliding) {
         // Rebound movement
         position.x -= forwardVector.x * speed * REBOUND_SPEED_FACTOR;
@@ -156,6 +159,9 @@ void Tanque::Render() {
     for (auto& proj : projectiles) {
         proj.Render();
     }
+
+    // Render explosions before tank
+    explosions.Render();
 
     // Draw health bar below the tank (changed from above)
     float healthBarWidth = baseWidth * 1.2f;  // Make it slightly wider than the tank
@@ -292,7 +298,10 @@ void Tanque::UpdateProjectiles(BSplineTrack* track) {
     for (auto& proj : projectiles) {
         if (proj.active) {
             proj.Update();
-            proj.CheckCollisionWithTrack(track);
+            // Pass the explosions manager for collision effects
+            if (proj.CheckCollisionWithTrack(track, &explosions)) {
+                // Projectile is now inactive due to collision
+            }
         }
     }
 
@@ -497,6 +506,10 @@ bool Tanque::CheckAllProjectilesAgainstTargets(std::vector<Target>& targets, int
         if (targetIdx >= 0) {
             hitTargetIndex = targetIdx;
             hitProjectileIndex = static_cast<int>(i);
+
+            // Create explosion on target hit
+            projectiles[i].CreateExplosionOnCollision(&explosions);
+
             return true;
         }
     }
