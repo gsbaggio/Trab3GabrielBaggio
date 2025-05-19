@@ -268,7 +268,7 @@ void UsePowerUp(Tanque* tank, std::vector<Target>& targets) {
 
 //funcao chamada continuamente. Deve-se controlar o que desenhar por meio de variaveis globais
 //Todos os comandos para desenho na canvas devem ser chamados dentro da render().
-//Deve-se manter essa funo com poucas linhas de codigo.
+//Deve-se manter essa funo com poucas linhas de codigo
 void render()
 {
    CV::clear(0.25f, 0.25f, 0.3f); // Changed to dark asphalt gray (former road color)
@@ -285,6 +285,9 @@ void render()
    if (!g_editorMode) {
        g_powerUp.Update();
        g_powerUp.Render();
+       
+       // Update the laser effect
+       PowerUp::UpdateLaserEffect();
    }
 
    // Render targets
@@ -294,6 +297,10 @@ void render()
        }
    }
 
+   // Render the laser effect (should be rendered after targets but before the tank)
+   if (!g_editorMode) {
+       PowerUp::RenderLaserEffect();
+   }
 
    // Update and Render Tank only if not in editor mode
    if (!g_editorMode && g_tanque) {

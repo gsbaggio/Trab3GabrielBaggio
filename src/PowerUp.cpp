@@ -3,6 +3,12 @@
 #include "Target.h"
 #include <cmath>
 
+// Initialize static members
+bool PowerUp::laserActive = false;
+int PowerUp::laserDuration = 0;
+Vector2 PowerUp::laserStart = Vector2(0, 0);
+Vector2 PowerUp::laserEnd = Vector2(0, 0);
+
 PowerUp::PowerUp() 
     : position(0, 0), active(false), type(PowerUpType::None), radius(15.0f), animationAngle(0.0f) {}
 
@@ -158,9 +164,11 @@ int PowerUp::ApplyLaserEffect(Tanque* tank, std::vector<Target>& targets) {
     const float LASER_RANGE = 2000.0f; 
     Vector2 laserEnd = laserStart + laserDir * LASER_RANGE;
     
-    // Draw the laser beam visual effect
-    CV::color(0.2f, 0.4f, 1.0f);
-    CV::line(laserStart.x, laserStart.y, laserEnd.x, laserEnd.y);
+    // Set the static laser effect properties for rendering over multiple frames
+    PowerUp::laserActive = true;
+    PowerUp::laserDuration = LASER_MAX_DURATION;
+    PowerUp::laserStart = laserStart;
+    PowerUp::laserEnd = laserEnd;
     
     // Check each target for collision with the laser beam
     for (auto& target : targets) {
@@ -186,9 +194,61 @@ int PowerUp::ApplyLaserEffect(Tanque* tank, std::vector<Target>& targets) {
             // Target is hit by laser - instant kill
             target.active = false;
             targetsDestroyed++;
+            
+            // Create an explosion at target position when hit by laser
+            if (tank) {  // Fixed: Just check if tank is valid
+                Vector2 explosionDir = (target.position - laserStart).normalized();
+                tank->explosions.CreateExplosion(target.position, explosionDir, 30);
+            }
         }
     }
     
     printf("PowerUp: Laser fired! Destroyed %d targets\n", targetsDestroyed);
     return targetsDestroyed;
+}
+
+void PowerUp::UpdateLaserEffect() {
+    // Decrement the duration if the laser is active
+    if (laserActive) {
+        laserDuration--;
+        if (laserDuration <= 0) {
+            laserActive = false;
+        }
+    }
+}
+
+void PowerUp::RenderLaserEffect() {
+    if (!laserActive) return;
+    
+    // Calculate alpha for fade-out effect
+    float alpha = static_cast<float>(laserDuration) / LASER_MAX_DURATION;
+    
+    // Draw the laser beam with increasing thickness for better visibility
+    float thickness = 6.0f * alpha; // Thicker at start, thinner as it fades
+    
+    // Draw the main laser beam
+    CV::color(0.2f, 0.4f, 1.0f, alpha);
+    CV::line(laserStart.x, laserStart.y, laserEnd.x, laserEnd.y);
+    
+    // Draw additional parallel beams for thickness
+    Vector2 dir = (laserEnd - laserStart).normalized();
+    Vector2 perpDir(-dir.y, dir.x); // Perpendicular direction
+    
+    for (float offset = 1.0f; offset <= thickness; offset += 1.0f) {
+        // Draw parallel lines on both sides
+        Vector2 offset1 = perpDir * offset;
+        Vector2 offset2 = perpDir * -offset;
+        
+        float alphaLine = alpha * (1.0f - offset/thickness); // Fade out at edges
+        
+        CV::color(0.3f, 0.5f, 1.0f, alphaLine * 0.7f);
+        CV::line(laserStart.x + offset1.x, laserStart.y + offset1.y, 
+                 laserEnd.x + offset1.x, laserEnd.y + offset1.y);
+        CV::line(laserStart.x + offset2.x, laserStart.y + offset2.y, 
+                 laserEnd.x + offset2.x, laserEnd.y + offset2.y);
+    }
+    
+    // Add a glowing effect at the start point
+    CV::color(0.4f, 0.6f, 1.0f, alpha * 0.8f);
+    CV::circleFill(laserStart.x, laserStart.y, 10.0f * alpha, 16);
 }

@@ -27,6 +27,13 @@ public:
     float radius;
     float animationAngle;
     
+    // Laser effect properties
+    static bool laserActive;
+    static int laserDuration;
+    static Vector2 laserStart;
+    static Vector2 laserEnd;
+    static const int LASER_MAX_DURATION = 45; // Laser lasts for 45 frames (3/4 second at 60fps)
+    
     PowerUp();
     PowerUp(const Vector2& pos, PowerUpType powerUpType);
     
@@ -43,6 +50,10 @@ public:
     static void ApplyHealthEffect(Tanque* tank);
     static bool ApplyShieldEffect(Tanque* tank); // Returns if shield was applied
     static int ApplyLaserEffect(Tanque* tank, std::vector<Target>& targets); // Fix: Match signature with implementation
+    
+    // Update and render the laser effect
+    static void UpdateLaserEffect();
+    static void RenderLaserEffect();
 };
 
 #endif
