@@ -42,7 +42,7 @@
 1193164156 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\relogio.h
 	"gl_canvas2d.h"
 
-1747339661 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\main.cpp
+1747661286 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\main.cpp
 	<GL/glut.h>
 	<GL/freeglut_ext.h>
 	<math.h>
@@ -50,7 +50,6 @@
 	<stdlib.h>
 	<time.h>
 	"gl_canvas2d.h"
-	"Relogio.h"
 	"Tanque.h"
 	"BSplineTrack.h"
 	"Target.h"
@@ -175,15 +174,24 @@
 	"Tanque.h"
 	"BSplineTrack.h"
 
-1747333456 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\projectile.h
+1747662486 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\projectile.h
 	"Vector2.h"
 	"gl_canvas2d.h"
 	"BSplineTrack.h"
 	<cmath>
 
-1747330538 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\target.h
+1747662487 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\target.h
 	"Vector2.h"
 	"gl_canvas2d.h"
+	<cmath>
+	<algorithm>
+
+1747662487 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\projectile.cpp
+	"Projectile.h"
+	<cmath>
+
+1747662487 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\target.cpp
+	"Target.h"
 	<cmath>
 	<algorithm>
 

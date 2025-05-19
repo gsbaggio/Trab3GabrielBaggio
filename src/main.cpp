@@ -257,8 +257,27 @@ void render()
 
        g_tanque->Render();
    } else if (g_editorMode && g_tanque) {
-        // Optionally render tank statically in editor mode or hide it
-        // g_tanque->Render(); // Render without update
+       // In editor mode, show the tank at its potential spawn position and orientation.
+       // This position is derived from the start of the track.
+       if (g_track && g_track->controlPointsLeft.size() >= g_track->MIN_CONTROL_POINTS_PER_CURVE && g_track->controlPointsRight.size() >= g_track->MIN_CONTROL_POINTS_PER_CURVE) {
+           Vector2 pL = g_track->getPointOnCurve(0.0f, CurveSide::Left);
+           Vector2 pR = g_track->getPointOnCurve(0.0f, CurveSide::Right);
+           g_tanque->position = (pL + pR) * 0.5f; // Center of track start
+
+           Vector2 tangentL = g_track->getTangentOnCurve(0.0f, CurveSide::Left);
+           Vector2 tangentR = g_track->getTangentOnCurve(0.0f, CurveSide::Right);
+           Vector2 avgTangent = (tangentL + tangentR) * 0.5f;
+
+           if (avgTangent.lengthSq() > 0.001f) { // Check if tangent is reasonably valid
+               avgTangent.normalize();
+               g_tanque->baseAngle = atan2(avgTangent.y, avgTangent.x);
+           } else {
+               g_tanque->baseAngle = 0.0f; // Default orientation if tangent is not clear
+           }
+           g_tanque->topAngle = g_tanque->baseAngle; // Align turret with base
+           g_tanque->forwardVector.set(cos(g_tanque->baseAngle), sin(g_tanque->baseAngle));
+       }
+       g_tanque->Render(); // Render the tank statically
    }
 
    // Draw player score at top-left (BEFORE translate to keep it fixed on screen)

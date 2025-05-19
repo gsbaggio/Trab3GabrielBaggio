@@ -43,10 +43,12 @@
 		</Linker>
 		<Unit filename="src/BSplineTrack.cpp" />
 		<Unit filename="src/BSplineTrack.h" />
-		<Unit filename="src/Relogio.cpp" />
-		<Unit filename="src/Relogio.h" />
+		<Unit filename="src/Projectile.cpp" />
+		<Unit filename="src/Projectile.h" />
 		<Unit filename="src/Tanque.cpp" />
 		<Unit filename="src/Tanque.h" />
+		<Unit filename="src/Target.cpp" />
+		<Unit filename="src/Target.h" />
 		<Unit filename="src/Vector2.h" />
 		<Unit filename="src/gl_canvas2d.cpp" />
 		<Unit filename="src/gl_canvas2d.h" />
