@@ -1,20 +1,5 @@
-/*********************************************************************
-// Canvas para desenho, criada sobre a API OpenGL. Nao eh necessario conhecimentos de OpenGL para usar.
-//  Autor: Cesar Tadeu Pozzer
-//         02/2025
-//
-//  Pode ser utilizada para fazer desenhos, animacoes, e jogos simples.
-//  Tem tratamento de mouse e teclado
-//  Estude o OpenGL antes de tentar compreender o arquivo gl_canvas.cpp
-//
-//  Versao 2.1
-//
-//  Instru��es:
-//	  Para alterar a animacao, digite numeros entre 1 e 3
-// *********************************************************************/
-
 #include <GL/glut.h>
-#include <GL/freeglut_ext.h> //callback da wheel do mouse.
+#include <GL/freeglut_ext.h> 
 
 #include <math.h>
 #include <stdio.h>
@@ -23,11 +8,10 @@
 
 #include "gl_canvas2d.h"
 
-#include "Relogio.h"
 #include "Tanque.h"
 #include "BSplineTrack.h"
-#include "Target.h" // Add include for Target class
-#include "Projectile.h" // Add include for Projectile class
+#include "Target.h" 
+#include "Projectile.h" 
 
 void motion(int x, int y);
 void resetTankToTrackStart(Tanque* tanque, BSplineTrack* track); // Forward declaration
@@ -35,21 +19,15 @@ void resetTankToTrackStart(Tanque* tanque, BSplineTrack* track); // Forward decl
 //largura e altura inicial da tela . Alteram com o redimensionamento de tela.
 int screenWidth = 1280, screenHeight = 720;
 
-// Old demo objects - can be removed or commented out if Tanque is the primary focus
-// Bola    *b = NULL;
-// Relogio *r = NULL;
-// Botao   *bt = NULL; //se a aplicacao tiver varios botoes, sugiro implementar um manager de botoes.
-// int opcao  = 50;//variavel global para selecao do que sera exibido na canvas.
-
-Tanque *g_tanque = NULL; // Global pointer for the tank
-BSplineTrack *g_track = NULL; // Global pointer for the track
+Tanque *g_tanque = NULL; 
+BSplineTrack *g_track = NULL; 
 
 bool g_editorMode = false;
 bool g_mousePressed = false;
 
 int mouseX, mouseY; //variaveis globais do mouse para poder exibir dentro da render().
 
-// Flags for tank rotation
+// flags para guardar rotacao do tanque
 bool keyA_down = false;
 bool keyD_down = false;
 
@@ -195,43 +173,6 @@ void ResetGameState(Tanque* tanque, BSplineTrack* track) {
     // Any additional reset logic goes here
 }
 
-// --- Comment out or remove old drawing functions if no longer needed ---
-/*
-void DesenhaSenoide()
-{
-   float x=0, y;
-   CV::color(1);
-   CV::translate(20, 200); //desenha o objeto a partir da coordenada (200, 200)
-   for(float i=0; i < 68; i+=0.001)
-   {
-      y = sin(i)*50;
-      CV::point(x, y);
-      x+=0.01;
-   }
-   CV::translate(0, 0);
-}
-
-void DesenhaLinhaDegrade()
-{
-   Vector2 p;
-   for(float i=0; i<350; i++)
-   {
-	  CV::color(i/200, i/200, i/200);
-	  p.set(i+100, 240);
-	  CV::point(p);
-   }
-
-   //desenha paleta de cores predefinidas na Canvas2D.
-   for(int idx = 0; idx < 14; idx++)
-   {
-	  CV::color(idx);
-      CV::translate(20 + idx*30, 100);
-	  CV::rectFill(Vector2(0,0), Vector2(30, 30));
-   }
-   CV::translate(0, 0);
-}
-*/
-
 void DrawMouseScreenCoords()
 {
 
@@ -330,24 +271,6 @@ void render()
 
     CV::text(10, 20, "Modo de Jogo | A/D = Girar | 'E' = Editor | 'M1' = Tiro | 'M2' = Poder");
    }
-   // --- Remove or comment out old demo logic ---
-   /*
-   bt->Render();
-   DesenhaLinhaDegrade();
-
-   if( opcao == 49 ) //'1' -> relogio
-   {
-      r->anima();
-   }
-   if( opcao == '2' ) //50 -> bola
-   {
-      b->anima();
-   }
-   if( opcao == 51 ) //'3' -> senoide
-   {
-       DesenhaSenoide();
-   }
-   */
 
    Sleep(10); // This introduces a fixed delay
    glutPostRedisplay(); // Request a redraw for the next frame
@@ -430,7 +353,7 @@ void mouse(int button, int state, int wheel, int direction, int x, int y)
    mouseX = x; //guarda as coordenadas do mouse para exibir dentro da render()
    mouseY = y;
 
-   // printf("\nmouse button: %d state: %d wheel: %d dir: %d x: %d y: %d", button, state, wheel, direction,  x, y);
+
 
    if (g_editorMode && g_track) {
        if (button == 0) { // Left mouse button

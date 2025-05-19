@@ -2,14 +2,19 @@
 <CodeBlocks_layout_file>
 	<FileVersion major="1" minor="0" />
 	<ActiveTarget name="Debug" />
+	<File name="src\BSplineTrack.h" open="0" top="0" tabpos="0" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="1807" topLine="38" />
+		</Cursor>
+	</File>
 	<File name="src\main.cpp" open="0" top="0" tabpos="0" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="8651" topLine="249" />
+			<Cursor1 position="12763" topLine="364" />
 		</Cursor>
 	</File>
 	<File name="src\BSplineTrack.cpp" open="0" top="0" tabpos="0" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="18779" topLine="401" />
+			<Cursor1 position="13014" topLine="286" />
 		</Cursor>
 	</File>
 	<File name="src\Vector2.h" open="0" top="0" tabpos="0" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
@@ -17,9 +22,14 @@
 			<Cursor1 position="327" topLine="16" />
 		</Cursor>
 	</File>
-	<File name="src\BSplineTrack.h" open="0" top="0" tabpos="0" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="src\Tanque.cpp" open="0" top="0" tabpos="0" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="1807" topLine="38" />
+			<Cursor1 position="8557" topLine="201" />
+		</Cursor>
+	</File>
+	<File name="src\Tanque.h" open="0" top="0" tabpos="0" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="2550" topLine="58" />
 		</Cursor>
 	</File>
 </CodeBlocks_layout_file>
