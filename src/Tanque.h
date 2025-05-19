@@ -53,6 +53,7 @@ public:
     bool isInvulnerable;
     int invulnerabilityTimer;
     static const int INVULNERABILITY_FRAMES = 60; // 1 second at 60fps
+    bool isShieldInvulnerable; // Flag to track if invulnerability is from shield
 
     // Add shield property
     bool hasShield;

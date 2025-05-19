@@ -1,5 +1,5 @@
 #include <GL/glut.h>
-#include <GL/freeglut_ext.h> 
+#include <GL/freeglut_ext.h>
 
 #include <math.h>
 #include <stdio.h>
@@ -10,8 +10,8 @@
 
 #include "Tanque.h"
 #include "BSplineTrack.h"
-#include "Target.h" 
-#include "Projectile.h" 
+#include "Target.h"
+#include "Projectile.h"
 #include "PowerUp.h" // New include for power-ups
 
 void motion(int x, int y);
@@ -20,8 +20,8 @@ void resetTankToTrackStart(Tanque* tanque, BSplineTrack* track); // Forward decl
 //largura e altura inicial da tela . Alteram com o redimensionamento de tela.
 int screenWidth = 1280, screenHeight = 720;
 
-Tanque *g_tanque = NULL; 
-BSplineTrack *g_track = NULL; 
+Tanque *g_tanque = NULL;
+BSplineTrack *g_track = NULL;
 
 bool g_editorMode = false;
 bool g_mousePressed = false;
@@ -114,13 +114,13 @@ void InitializeTargets(BSplineTrack* track) {
     for (int i = 0; i < NUM_TARGETS; i++) {
         // Find a good position for the target
         Vector2 position = GenerateRandomTargetPosition(track, g_tanque->position, true);
-        
+
         // Determine target type based on game level and position in array
         TargetType targetType = TargetType::Basic; // Default is basic
-        
+
         // Higher levels have more varied enemies
         float rand_val = (float)rand() / RAND_MAX;
-        
+
         if (g_gameLevel >= 3 && i == NUM_TARGETS - 1) {
             // From level 3, last enemy is always a Star
             targetType = TargetType::Star;
@@ -137,14 +137,14 @@ void InitializeTargets(BSplineTrack* track) {
             // From level 2, 40% chance for remaining enemies to be Shooters
             targetType = TargetType::Shooter;
         }
-        
+
         // Create the target with health scaled to current level
         Target target(position, targetType);
         target.active = true;
-        
+
         // Scale health with game level: base health (2) + additional health based on level
         target.maxHealth = 2 + (g_gameLevel - 1);
-        
+
         // Shooter types get +1 health
         if (target.type == TargetType::Shooter) {
             target.maxHealth += 1;
@@ -152,22 +152,22 @@ void InitializeTargets(BSplineTrack* track) {
         // Star types get +2 health and custom movement properties
         else if (target.type == TargetType::Star) {
             target.maxHealth += 2;
-            
+
             // Stars move more slowly but still scale with level
             target.moveSpeed = 0.5f + (g_gameLevel * 0.1f);  // Much slower base speed
-            
+
             // Stars detect from further away at higher levels
             target.detectionRadius = 150.0f + (g_gameLevel * 25.0f);
-            
+
             // Rotation speed increases slightly with level
             target.rotationSpeed = 0.05f + (g_gameLevel - 1) * 0.01f;
         }
-        
+
         target.health = target.maxHealth;
-        
+
         g_targets.push_back(target);
     }
-    
+
     // Count special targets for log message
     int shooterCount = 0;
     int starCount = 0;
@@ -175,10 +175,10 @@ void InitializeTargets(BSplineTrack* track) {
         if (target.type == TargetType::Shooter) shooterCount++;
         else if (target.type == TargetType::Star) starCount++;
     }
-    
-    printf("Level %d started with %d targets (%d shooters, %d stars)\n", 
+
+    printf("Level %d started with %d targets (%d shooters, %d stars)\n",
            g_gameLevel, NUM_TARGETS, shooterCount, starCount);
-           
+
     // Always spawn a power-up when initializing targets if none exists
     SpawnPowerUp(track);
 }
@@ -187,22 +187,22 @@ void InitializeTargets(BSplineTrack* track) {
 void SpawnPowerUp(BSplineTrack* track) {
     // Only spawn if no active power-up exists and no stored power-up
     if (g_powerUp.active || g_storedPowerUp != PowerUpType::None) return;
-    
+
     if (!track || track->controlPointsLeft.size() < 4 || track->controlPointsRight.size() < 4) {
         printf("Warning: Cannot spawn power-up, track is not properly initialized\n");
         return;
     }
-    
+
     // Generate a random position on the track
     Vector2 position = GenerateRandomTargetPosition(track, g_tanque->position, true);
-    
+
     // Choose a random power-up type
     int randType = rand() % 3 + 1; // 1-3
     PowerUpType type = static_cast<PowerUpType>(randType);
-    
+
     // Create and activate the power-up
     g_powerUp = PowerUp(position, type);
-    printf("PowerUp spawned: %s at position (%.1f, %.1f)\n", 
+    printf("PowerUp spawned: %s at position (%.1f, %.1f)\n",
            PowerUp::GetTypeName(type), position.x, position.y);
 }
 
@@ -224,7 +224,7 @@ void ResetGameState(Tanque* tanque, BSplineTrack* track) {
     // Reset power-ups
     g_powerUp.active = false;
     g_storedPowerUp = PowerUpType::None;
-    
+
     // Spawn a new power-up
     SpawnPowerUp(track);
 }
@@ -232,23 +232,23 @@ void ResetGameState(Tanque* tanque, BSplineTrack* track) {
 // Implement UsePowerUp function
 void UsePowerUp(Tanque* tank, std::vector<Target>& targets) {
     if (!tank || g_storedPowerUp == PowerUpType::None) return;
-    
+
     switch (g_storedPowerUp) {
         case PowerUpType::Health:
             PowerUp::ApplyHealthEffect(tank);
             break;
-            
+
         case PowerUpType::Shield:
             PowerUp::ApplyShieldEffect(tank);
             break;
-            
+
         case PowerUpType::Laser: {
             int targetsDestroyed = PowerUp::ApplyLaserEffect(tank, targets);
-            
+
             // Update score and destroyed targets count for each destroyed target
             g_playerScore += targetsDestroyed * 100;
             g_destroyedTargets += targetsDestroyed;
-            
+
             // Check if all targets have been destroyed
             if (g_destroyedTargets >= NUM_TARGETS) {
                 // Level complete - advance to next level
@@ -257,11 +257,11 @@ void UsePowerUp(Tanque* tank, std::vector<Target>& targets) {
             }
             break;
         }
-        
+
         default:
             break;
     }
-    
+
     // Clear the stored power-up after use
     g_storedPowerUp = PowerUpType::None;
 }
@@ -280,7 +280,7 @@ void render()
    if (g_track) {
        g_track->Render(g_editorMode);
    }
-   
+
    // Update and render power-up - MOVED HERE for proper rendering order
    if (!g_editorMode) {
        g_powerUp.Update();
@@ -311,10 +311,10 @@ void render()
            // Store the power-up type and deactivate the power-up
            g_storedPowerUp = g_powerUp.type;
            g_powerUp.active = false;
-           
+
            printf("PowerUp collected: %s\n", PowerUp::GetTypeName(g_storedPowerUp));
        }
-       
+
        // Check for shielded tank when taking damage
        if (!g_tanque->isInvulnerable) {
            // Check for star targets hitting the tank
@@ -325,29 +325,42 @@ void render()
                    float dy = target.position.y - g_tanque->position.y;
                    float distSq = dx*dx + dy*dy;
                    float combinedRadius = g_tanque->baseWidth/2.0f + target.radius;
-                   
+
                    if (distSq < combinedRadius * combinedRadius) {
-                       // Apply special handling for star collision
-                       
-                       // Tank takes damage - 50% of max health
-                       int damage = g_tanque->maxHealth / 2;
-                       g_tanque->health -= damage;
-                       if (g_tanque->health < 0) g_tanque->health = 0;
-                       
-                       // Make tank temporarily invulnerable
-                       g_tanque->isInvulnerable = true;
-                       g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;
-                       
-                       printf("Tank hit by star enemy! Damage: %d, Health: %d/%d\n", 
-                              damage, g_tanque->health, g_tanque->maxHealth);
-                       
-                       // Kill the star target
-                       target.active = false;
+                       // Check if shield is active
+                       if (g_tanque->hasShield) {
+                           // Shield blocks damage
+                           g_tanque->hasShield = false; // Consume the shield
+                           // Make tank temporarily invulnerable and flash
+                           g_tanque->isInvulnerable = true;
+                           g_tanque->isShieldInvulnerable = true; // Set flag for shield invulnerability
+                           g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;
+                           printf("Shield blocked damage from star enemy!\n");
+                           
+                           // Kill the star target (always for shield)
+                           target.active = false;
+                       } else {
+                           // No shield, apply normal damage
+                           int damage = g_tanque->maxHealth / 2;
+                           g_tanque->health -= damage;
+                           if (g_tanque->health < 0) g_tanque->health = 0;
+                           
+                           // Make tank temporarily invulnerable
+                           g_tanque->isInvulnerable = true;
+                           g_tanque->isShieldInvulnerable = false; // Regular damage
+                           g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;
+                           
+                           printf("Tank hit by star enemy! Damage: %d, Health: %d/%d\n", 
+                                damage, g_tanque->health, g_tanque->maxHealth);
+                           
+                           // Kill the star target
+                           target.active = false;
+                       }
                        
                        // Increase score and destroyed targets count
                        g_playerScore += 150;  // More points for star enemies
                        g_destroyedTargets++;
-                       
+
                        // Check if all targets have been destroyed
                        if (g_destroyedTargets >= NUM_TARGETS) {
                            // Level complete - advance to next level
@@ -359,7 +372,7 @@ void render()
            }
        }
        
-       // Check for enemy projectiles hitting the tank - ADD THIS BLOCK
+       // Check for enemy projectiles hitting the tank
        if (!g_tanque->isInvulnerable) {
            for (auto& target : g_targets) {
                if (target.active && target.type == TargetType::Shooter) {
@@ -370,22 +383,34 @@ void render()
                            float dy = proj.position.y - g_tanque->position.y;
                            float distSq = dx*dx + dy*dy;
                            float combinedRadius = g_tanque->baseWidth/2.0f + proj.radius;
-                           
+
                            if (distSq < combinedRadius * combinedRadius) {
                                // Tank hit by enemy projectile
                                proj.active = false;
-                               
-                               // Apply damage to tank
-                               int damage = g_tanque->maxHealth / 8; // 12.5% damage per hit
-                               g_tanque->health -= damage;
-                               if (g_tanque->health < 0) g_tanque->health = 0;
-                               
-                               // Make tank temporarily invulnerable
-                               g_tanque->isInvulnerable = true;
-                               g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;
-                               
-                               printf("Tank hit by enemy projectile! Health: %d/%d\n", 
-                                      g_tanque->health, g_tanque->maxHealth);
+
+                               // Check if shield is active
+                               if (g_tanque->hasShield) {
+                                   // Shield blocks damage
+                                   g_tanque->hasShield = false; // Consume the shield
+                                   // Make tank temporarily invulnerable and flash
+                                   g_tanque->isInvulnerable = true;
+                                   g_tanque->isShieldInvulnerable = true; // Set flag for shield invulnerability
+                                   g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;
+                                   printf("Shield blocked damage from enemy projectile!\n");
+                               } else {
+                                   // Apply damage to tank
+                                   int damage = g_tanque->maxHealth / 8; // 12.5% damage per hit
+                                   g_tanque->health -= damage;
+                                   if (g_tanque->health < 0) g_tanque->health = 0;
+                                   
+                                   // Make tank temporarily invulnerable
+                                   g_tanque->isInvulnerable = true;
+                                   g_tanque->isShieldInvulnerable = false; // Regular damage
+                                   g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;
+                                   
+                                   printf("Tank hit by enemy projectile! Health: %d/%d\n", 
+                                          g_tanque->health, g_tanque->maxHealth);
+                               }
                            }
                        }
                    }
@@ -399,7 +424,7 @@ void render()
            // Target was destroyed by tank collision - increase score
            g_playerScore += 100;
            g_destroyedTargets++;
-           
+
            // Check if all targets have been destroyed
            if (g_destroyedTargets >= NUM_TARGETS) {
                // Level complete - advance to next level
@@ -421,7 +446,7 @@ void render()
                if (!g_targets[hitTargetIndex].active) {
                    g_playerScore += 100;
                    g_destroyedTargets++;
-                   
+
                    // Check if all targets have been destroyed
                    if (g_destroyedTargets >= NUM_TARGETS) {
                        // Level complete - advance to next level
@@ -473,21 +498,21 @@ void render()
        g_tanque->Render(); // Render the tank statically
    }
 
-      
+
    // Draw player score at top-left (BEFORE translate to keep it fixed on screen)
    char scoreText[100]; // Increased buffer size to accommodate level information
    char powerText[100];
    if(!g_editorMode){
     CV::translate(0, 0);
-    sprintf(scoreText, "Score: %d | Level: %d | Targets: %d/%d", 
+    sprintf(scoreText, "Score: %d | Level: %d | Targets: %d/%d",
             g_playerScore, g_gameLevel, g_destroyedTargets, NUM_TARGETS);
     CV::color(1.0f, 1.0f, 1.0f);
     CV::text(10, 40, scoreText);
-    
+
     // Display stored power-up info
     sprintf(powerText, "PowerUp: %s", PowerUp::GetTypeName(g_storedPowerUp));
     CV::text(10, 60, powerText);
-    
+
     // Display shield status if active
     if (g_tanque && g_tanque->hasShield) {
         CV::color(0.3f, 0.3f, 1.0f);
@@ -584,10 +609,10 @@ void mouse(int button, int state, int wheel, int direction, int x, int y)
        if (button == 0) { // Left mouse button
            if (state == 0) { // Pressed
                g_mousePressed = true;
-               
+
            } else { // Released
                g_mousePressed = false;
-               
+
            }
        }
    }

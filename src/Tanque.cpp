@@ -39,6 +39,7 @@ Tanque::Tanque(float x, float y, float initialSpeed, float initialRotationRate) 
     maxHealth = 100;
     isInvulnerable = false;
     invulnerabilityTimer = 0;
+    isShieldInvulnerable = false;
 
     // Initialize shield
     hasShield = false;
@@ -175,7 +176,11 @@ void Tanque::Render() {
     // Use a flash effect when tank is invulnerable (hit)
     if (isInvulnerable) {
         if ((invulnerabilityTimer / 5) % 2 == 0) {
-            CV::color(1.0f, 0.2f, 0.2f); // Red flash
+            if (isShieldInvulnerable) {
+                CV::color(0.3f, 0.3f, 1.0f); // Blue flash for shield
+            } else {
+                CV::color(1.0f, 0.2f, 0.2f); // Red flash for damage
+            }
         } else {
             CV::color(0.2f, 0.5f, 0.2f); // Normal green
         }
@@ -376,14 +381,25 @@ void Tanque::CheckCollisionAndRespond(BSplineTrack* track) {
         
         // Only apply damage if the tank isn't already invulnerable
         if (canTakeDamage) {
-            // Tank takes damage - 25% of max health (same as target collision)
-            int damageTaken = maxHealth / 4;  // 25% of max health
-            health -= damageTaken;
-            if (health < 0) health = 0;
-            
-            // Make tank temporarily invulnerable and flash (just like with target collisions)
-            isInvulnerable = true;
-            invulnerabilityTimer = INVULNERABILITY_FRAMES;
+            // Check if we have a shield to block the damage
+            if (hasShield) {
+                hasShield = false; // Consume the shield
+                // Still make the tank temporarily invulnerable and flash
+                isInvulnerable = true;
+                isShieldInvulnerable = true; // Set flag for shield invulnerability
+                invulnerabilityTimer = INVULNERABILITY_FRAMES;
+                printf("Shield blocked damage from track collision!\n");
+            } else {
+                // Tank takes damage - 25% of max health (same as target collision)
+                int damageTaken = maxHealth / 4;  // 25% of max health
+                health -= damageTaken;
+                if (health < 0) health = 0;
+                
+                // Make tank temporarily invulnerable and flash (just like with target collisions)
+                isInvulnerable = true;
+                isShieldInvulnerable = false; // Regular damage
+                invulnerabilityTimer = INVULNERABILITY_FRAMES;
+            }
         }
     } else {
         // No new collision detected by this check.
@@ -399,6 +415,7 @@ int Tanque::CheckTargetCollisions(std::vector<Target>& targets) {
         invulnerabilityTimer--;
         if (invulnerabilityTimer <= 0) {
             isInvulnerable = false;
+            isShieldInvulnerable = false; // Reset shield invulnerability flag too
         }
         return -1;
     }
@@ -411,21 +428,40 @@ int Tanque::CheckTargetCollisions(std::vector<Target>& targets) {
         }
         
         if (targets[i].active && targets[i].CheckCollisionWithTank(position, baseWidth, baseHeight, baseAngle)) {
-            // Tank takes damage - 25% of max health instead of fixed 10 points
-            int damageTaken = maxHealth / 4;  // 25% of max health
-            health -= damageTaken;
-            if (health < 0) health = 0;
-            
-            // Make tank temporarily invulnerable to prevent multiple rapid hits
-            isInvulnerable = true;
-            invulnerabilityTimer = INVULNERABILITY_FRAMES;
-            
-            // Target takes damage too
-            targets[i].TakeDamage(1);
-            
-            // Check if target was destroyed by this collision
-            if (!targets[i].active) {
-                return i; // Return the index of the destroyed target
+            // Check if we have a shield to block the damage
+            if (hasShield) {
+                hasShield = false; // Consume the shield
+                // Still make the tank temporarily invulnerable and flash
+                isInvulnerable = true;
+                isShieldInvulnerable = true; // Set flag for shield invulnerability
+                invulnerabilityTimer = INVULNERABILITY_FRAMES;
+                printf("Shield blocked damage from target collision!\n");
+                
+                // Target takes damage and should be destroyed when hitting a shield
+                targets[i].TakeDamage(targets[i].health); // Kill the target by dealing its full health
+                
+                // Check if target was destroyed by this collision
+                if (!targets[i].active) {
+                    return i; // Return the index of the destroyed target
+                }
+            } else {
+                // Apply normal damage
+                int damageTaken = maxHealth / 4;  // 25% of max health
+                health -= damageTaken;
+                if (health < 0) health = 0;
+                
+                // Make tank temporarily invulnerable to prevent multiple rapid hits
+                isInvulnerable = true;
+                isShieldInvulnerable = false; // Regular damage
+                invulnerabilityTimer = INVULNERABILITY_FRAMES;
+                
+                // Target takes damage too
+                targets[i].TakeDamage(1);
+                
+                // Check if target was destroyed by this collision
+                if (!targets[i].active) {
+                    return i; // Return the index of the destroyed target
+                }
             }
             
             // If we hit any target, we can break the loop since we're now invulnerable

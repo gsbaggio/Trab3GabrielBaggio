@@ -336,10 +336,10 @@ void BSplineTrack::Render(bool editorMode) {
     }
     
     // Render left curve boundary (e.g., green boundary)
-    renderCurve(controlPointsLeft, 0.1f, 0.4f, 0.1f); // Darker green for the line itself
+    renderCurve(controlPointsLeft, 0.1f, 0.1f, 0.4f); // Darker green for the line itself
     
     // Render right curve boundary (e.g., red boundary)
-    renderCurve(controlPointsRight, 0.4f, 0.1f, 0.1f); // Darker red for the line itself
+    renderCurve(controlPointsRight, 0.1f, 0.1f, 0.4f); // Darker red for the line itself
 
     // Remove the old code that drew lines between curves
     /*

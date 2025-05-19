@@ -133,14 +133,14 @@
 1747262914 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\relogio.h
 	"gl_canvas2d.h"
 
-1747695184 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\tanque.cpp
+1747696109 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\tanque.cpp
 	"Tanque.h"
 	"gl_canvas2d.h"
 	<cmath>
 	<algorithm>
 	"BSplineTrack.h"
 
-1747695184 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\tanque.h
+1747696609 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\tanque.h
 	"gl_canvas2d.h"
 	"Vector2.h"
 	<cmath>
@@ -159,7 +159,7 @@
 	<string>
 	<cfloat>
 
-1747689592 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\bsplinetrack.cpp
+1747695911 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\bsplinetrack.cpp
 	"BSplineTrack.h"
 	<vector>
 	<cmath>
@@ -168,7 +168,7 @@
 	<string>
 	<cfloat>
 
-1747695184 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\main.cpp
+1747695738 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\main.cpp
 	<GL/glut.h>
 	<GL/freeglut_ext.h>
 	<math.h>
