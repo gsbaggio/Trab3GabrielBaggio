@@ -37,6 +37,8 @@ const int NUM_TARGETS = 5;
 // Global variables for game state
 std::vector<Target> g_targets;
 int g_playerScore = 0;
+int g_gameLevel = 1;  // Current game level
+int g_destroyedTargets = 0;  // Counter for destroyed targets in current level
 
 // Modified function to avoid respawning near the tank or previous position
 Vector2 GenerateRandomTargetPosition(BSplineTrack* track, const Vector2& avoidPosition = Vector2(0,0), bool checkAvoidance = false) {
@@ -95,71 +97,86 @@ Vector2 GenerateRandomTargetPosition(BSplineTrack* track, const Vector2& avoidPo
     return Vector2(0, 0);
 }
 
-// Function to spawn a target at a random position
-void SpawnTarget(BSplineTrack* track) {
-    // Find an inactive target slot or the first active one if all are active
-    int targetIndex = -1;
-    for (size_t i = 0; i < g_targets.size(); i++) {
-        if (!g_targets[i].active) {
-            targetIndex = i;
-            break;
-        }
-    }
-
-    // If no inactive slot found and we have fewer than NUM_TARGETS, add a new one
-    bool isNewTarget = false;
-    if (targetIndex == -1 && g_targets.size() < NUM_TARGETS) {
-        g_targets.emplace_back();
-        targetIndex = g_targets.size() - 1;
-        isNewTarget = true;
-    }
-
-    // If we found a slot to use or added a new one
-    if (targetIndex >= 0 && targetIndex < static_cast<int>(g_targets.size())) {
-        // Store previous position for existing targets (those being respawned)
-        Vector2 previousPosition = g_targets[targetIndex].position;
-        Vector2 position;
-
-        if (isNewTarget) {
-            // For completely new targets, just avoid the tank
-            position = GenerateRandomTargetPosition(track, g_tanque->position, true);
-        } else {
-            // For respawning targets, avoid BOTH the tank AND the previous position
-            position = GenerateRandomTargetPosition(track, g_tanque->position, true);
-
-            // If we successfully found a position away from the tank,
-            // make sure it's also away from previous position
-            if (position.x != 0.0f || position.y != 0.0f) {
-                if (position.distSq(previousPosition) < 150.0f * 150.0f) {
-                    // If still too close to previous position, try again
-                    Vector2 betterPosition = GenerateRandomTargetPosition(track, previousPosition, true);
-                    if (betterPosition.x != 0.0f || betterPosition.y != 0.0f) {
-                        position = betterPosition;
-                    }
-                }
-            }
-        }
-
-        // Set the target's new position and activate it
-        g_targets[targetIndex].position = position;
-        g_targets[targetIndex].active = true;
-        g_targets[targetIndex].health = g_targets[targetIndex].maxHealth; // Reset health when respawning
-    }
-}
-
-// Function to initialize or reset all targets
+// Modified function to initialize or reset all targets with level-scaled health
 void InitializeTargets(BSplineTrack* track) {
     g_targets.clear();
+    g_destroyedTargets = 0;  // Reset the destroyed targets counter
 
     // Create NUM_TARGETS targets
     for (int i = 0; i < NUM_TARGETS; i++) {
-        SpawnTarget(track);
+        // Find a good position for the target
+        Vector2 position = GenerateRandomTargetPosition(track, g_tanque->position, true);
+        
+        // Determine target type based on game level and position in array
+        TargetType targetType = TargetType::Basic; // Default is basic
+        
+        // Higher levels have more varied enemies
+        float rand_val = (float)rand() / RAND_MAX;
+        
+        if (g_gameLevel >= 3 && i == NUM_TARGETS - 1) {
+            // From level 3, last enemy is always a Star
+            targetType = TargetType::Star;
+        }
+        else if (g_gameLevel >= 2 && i == NUM_TARGETS - 2) {
+            // From level 2, second-to-last enemy is always a Shooter
+            targetType = TargetType::Shooter;
+        }
+        else if (g_gameLevel >= 4 && rand_val < 0.3f) {
+            // From level 4, 30% chance for any other enemy to be a Star
+            targetType = TargetType::Star;
+        }
+        else if (g_gameLevel >= 2 && rand_val < 0.4f) {
+            // From level 2, 40% chance for remaining enemies to be Shooters
+            targetType = TargetType::Shooter;
+        }
+        
+        // Create the target with health scaled to current level
+        Target target(position, targetType);
+        target.active = true;
+        
+        // Scale health with game level: base health (2) + additional health based on level
+        target.maxHealth = 2 + (g_gameLevel - 1);
+        
+        // Shooter types get +1 health
+        if (target.type == TargetType::Shooter) {
+            target.maxHealth += 1;
+        }
+        // Star types get +2 health and custom movement properties
+        else if (target.type == TargetType::Star) {
+            target.maxHealth += 2;
+            
+            // Stars move more slowly but still scale with level
+            target.moveSpeed = 0.5f + (g_gameLevel * 0.1f);  // Much slower base speed
+            
+            // Stars detect from further away at higher levels
+            target.detectionRadius = 150.0f + (g_gameLevel * 25.0f);
+            
+            // Rotation speed increases slightly with level
+            target.rotationSpeed = 0.05f + (g_gameLevel - 1) * 0.01f;
+        }
+        
+        target.health = target.maxHealth;
+        
+        g_targets.push_back(target);
     }
+    
+    // Count special targets for log message
+    int shooterCount = 0;
+    int starCount = 0;
+    for (const auto& target : g_targets) {
+        if (target.type == TargetType::Shooter) shooterCount++;
+        else if (target.type == TargetType::Star) starCount++;
+    }
+    
+    printf("Level %d started with %d targets (%d shooters, %d stars)\n", 
+           g_gameLevel, NUM_TARGETS, shooterCount, starCount);
 }
 
 // Function to reset the game state
 void ResetGameState(Tanque* tanque, BSplineTrack* track) {
     g_playerScore = 0;
+    g_gameLevel = 1;  // Reset level to 1
+    g_destroyedTargets = 0;  // Reset destroyed targets counter
 
     // Reset tank health
     if (tanque) {
@@ -173,10 +190,7 @@ void ResetGameState(Tanque* tanque, BSplineTrack* track) {
     // Any additional reset logic goes here
 }
 
-void DrawMouseScreenCoords()
-{
 
-}
 
 //funcao chamada continuamente. Deve-se controlar o que desenhar por meio de variaveis globais
 //Todos os comandos para desenho na canvas devem ser chamados dentro da render().
@@ -202,7 +216,6 @@ void render()
        }
    }
 
-   DrawMouseScreenCoords();
 
    // Update and Render Tank only if not in editor mode
    if (!g_editorMode && g_tanque) {
@@ -210,14 +223,101 @@ void render()
                        static_cast<float>(mouseY + g_tanque->position.y - screenHeight/2),
                        keyA_down, keyD_down, g_track);
 
+       // Update all targets
+       for (auto& target : g_targets) {
+           target.Update(g_tanque->position, g_track);
+       }
+
+       // Check for star targets directly hitting the tank
+       if (!g_tanque->isInvulnerable) {
+           for (size_t i = 0; i < g_targets.size(); i++) {
+               Target& target = g_targets[i];
+               if (target.active && target.type == TargetType::Star) {
+                   float dx = target.position.x - g_tanque->position.x;
+                   float dy = target.position.y - g_tanque->position.y;
+                   float distSq = dx*dx + dy*dy;
+                   float combinedRadius = g_tanque->baseWidth/2.0f + target.radius;
+                   
+                   if (distSq < combinedRadius * combinedRadius) {
+                       // Apply special handling for star collision
+                       
+                       // Tank takes damage - 50% of max health
+                       int damage = g_tanque->maxHealth / 2;
+                       g_tanque->health -= damage;
+                       if (g_tanque->health < 0) g_tanque->health = 0;
+                       
+                       // Make tank temporarily invulnerable
+                       g_tanque->isInvulnerable = true;
+                       g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;
+                       
+                       printf("Tank hit by star enemy! Damage: %d, Health: %d/%d\n", 
+                              damage, g_tanque->health, g_tanque->maxHealth);
+                       
+                       // Kill the star target
+                       target.active = false;
+                       
+                       // Increase score and destroyed targets count
+                       g_playerScore += 150;  // More points for star enemies
+                       g_destroyedTargets++;
+                       
+                       // Check if all targets have been destroyed
+                       if (g_destroyedTargets >= NUM_TARGETS) {
+                           // Level complete - advance to next level
+                           g_gameLevel++;
+                           InitializeTargets(g_track);
+                       }
+                   }
+               }
+           }
+       }
+       
+       // Check for enemy projectiles hitting the tank - ADD THIS BLOCK
+       if (!g_tanque->isInvulnerable) {
+           for (auto& target : g_targets) {
+               if (target.active && target.type == TargetType::Shooter) {
+                   for (auto& proj : target.projectiles) {
+                       if (proj.active) {
+                           // Simple circular collision with tank center
+                           float dx = proj.position.x - g_tanque->position.x;
+                           float dy = proj.position.y - g_tanque->position.y;
+                           float distSq = dx*dx + dy*dy;
+                           float combinedRadius = g_tanque->baseWidth/2.0f + proj.radius;
+                           
+                           if (distSq < combinedRadius * combinedRadius) {
+                               // Tank hit by enemy projectile
+                               proj.active = false;
+                               
+                               // Apply damage to tank
+                               int damage = g_tanque->maxHealth / 8; // 12.5% damage per hit
+                               g_tanque->health -= damage;
+                               if (g_tanque->health < 0) g_tanque->health = 0;
+                               
+                               // Make tank temporarily invulnerable
+                               g_tanque->isInvulnerable = true;
+                               g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;
+                               
+                               printf("Tank hit by enemy projectile! Health: %d/%d\n", 
+                                      g_tanque->health, g_tanque->maxHealth);
+                           }
+                       }
+                   }
+               }
+           }
+       }
+
        // Check for tank collision with targets - now catching the return value
        int destroyedTargetIndex = g_tanque->CheckTargetCollisions(g_targets);
        if (destroyedTargetIndex >= 0) {
-           // Target was destroyed by tank collision - increase score and respawn
+           // Target was destroyed by tank collision - increase score
            g_playerScore += 100;
-
-           // Spawn a new target to replace the destroyed one
-           SpawnTarget(g_track);
+           g_destroyedTargets++;
+           
+           // Check if all targets have been destroyed
+           if (g_destroyedTargets >= NUM_TARGETS) {
+               // Level complete - advance to next level
+               g_gameLevel++;
+               InitializeTargets(g_track);  // Spawn new wave with increased health
+           }
        }
 
        // Check for projectile-target collisions
@@ -232,9 +332,14 @@ void render()
                // If target was destroyed (health reached 0)
                if (!g_targets[hitTargetIndex].active) {
                    g_playerScore += 100;
-
-                   // Spawn a new target to replace the destroyed one
-                   SpawnTarget(g_track);
+                   g_destroyedTargets++;
+                   
+                   // Check if all targets have been destroyed
+                   if (g_destroyedTargets >= NUM_TARGETS) {
+                       // Level complete - advance to next level
+                       g_gameLevel++;
+                       InitializeTargets(g_track);  // Spawn new wave with increased health
+                   }
                }
            }
 
@@ -281,10 +386,11 @@ void render()
    }
 
    // Draw player score at top-left (BEFORE translate to keep it fixed on screen)
-   char scoreText[50];
+   char scoreText[100]; // Increased buffer size to accommodate level information
    if(!g_editorMode){
     CV::translate(0, 0);
-    sprintf(scoreText, "Score: %d", g_playerScore); // Removed health percentage display
+    sprintf(scoreText, "Score: %d | Level: %d | Targets: %d/%d", 
+            g_playerScore, g_gameLevel, g_destroyedTargets, NUM_TARGETS);
     CV::color(1.0f, 1.0f, 1.0f);
     CV::text(10, 40, scoreText);
 
@@ -378,14 +484,10 @@ void mouse(int button, int state, int wheel, int direction, int x, int y)
        if (button == 0) { // Left mouse button
            if (state == 0) { // Pressed
                g_mousePressed = true;
-               if (!g_track->selectControlPoint(static_cast<float>(x), static_cast<float>(y))) {
-                   // If click was not on a point, deselect any selected point
-                   // g_track->deselectControlPoint(); // Or keep selected for adding new points relative to it
-               }
+               
            } else { // Released
                g_mousePressed = false;
-               // Optional: deselect point on release if not dragging, or keep selected
-               // g_track->deselectControlPoint();
+               
            }
        }
    }

@@ -402,6 +402,11 @@ int Tanque::CheckTargetCollisions(std::vector<Target>& targets) {
     
     // Check each target for collision with the tank
     for (size_t i = 0; i < targets.size(); i++) {
+        // Skip Star type targets as they are handled separately in the main render loop
+        if (targets[i].type == TargetType::Star) {
+            continue;
+        }
+        
         if (targets[i].active && targets[i].CheckCollisionWithTank(position, baseWidth, baseHeight, baseAngle)) {
             // Tank takes damage - 25% of max health instead of fixed 10 points
             int damageTaken = maxHealth / 4;  // 25% of max health

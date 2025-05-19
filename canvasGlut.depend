@@ -90,11 +90,11 @@
 	<string>
 	<cfloat>
 
-1747262914 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\gl_canvas2d.cpp
+1747689592 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\gl_canvas2d.cpp
 	"gl_canvas2d.h"
 	<GL/glut.h>
 
-1747262914 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\gl_canvas2d.h
+1747689592 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\gl_canvas2d.h
 	<stdio.h>
 	<stdlib.h>
 	<math.h>
@@ -133,16 +133,21 @@
 1747262914 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\relogio.h
 	"gl_canvas2d.h"
 
-1747278427 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\tanque.cpp
+1747692997 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\tanque.cpp
 	"Tanque.h"
 	"gl_canvas2d.h"
 	<cmath>
+	<algorithm>
 	"BSplineTrack.h"
 
-1747278513 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\tanque.h
+1747689592 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\tanque.h
 	"gl_canvas2d.h"
 	"Vector2.h"
 	<cmath>
+	<vector>
+	"BSplineTrack.h"
+	"Projectile.h"
+	"Target.h"
 
 1747262914 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\bsplinetrack.h
 	<vector>
@@ -154,7 +159,7 @@
 	<string>
 	<cfloat>
 
-1747273804 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\bsplinetrack.cpp
+1747689592 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\bsplinetrack.cpp
 	"BSplineTrack.h"
 	<vector>
 	<cmath>
@@ -163,16 +168,18 @@
 	<string>
 	<cfloat>
 
-1747277146 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\main.cpp
+1747693513 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\main.cpp
 	<GL/glut.h>
 	<GL/freeglut_ext.h>
 	<math.h>
 	<stdio.h>
 	<stdlib.h>
+	<time.h>
 	"gl_canvas2d.h"
-	"Relogio.h"
 	"Tanque.h"
 	"BSplineTrack.h"
+	"Target.h"
+	"Projectile.h"
 
 1747662486 c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\projectile.h
 	"Vector2.h"
@@ -192,6 +199,29 @@
 
 1747662487 source:c:\users\samsung\desktop\cg\demos\trab3gabrielbaggio\src\target.cpp
 	"Target.h"
+	<cmath>
+	<algorithm>
+
+1747689592 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\projectile.cpp
+	"Projectile.h"
+	<cmath>
+
+1747689592 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\projectile.h
+	"Vector2.h"
+	"gl_canvas2d.h"
+	"BSplineTrack.h"
+	<cmath>
+
+1747693507 c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\target.h
+	"Vector2.h"
+	"gl_canvas2d.h"
+	<cmath>
+	<algorithm>
+	<vector>
+
+1747693507 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\target.cpp
+	"Target.h"
+	"BSplineTrack.h"
 	<cmath>
 	<algorithm>
 
