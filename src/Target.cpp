@@ -238,6 +238,17 @@ bool Target::CheckCollisionWithTank(const Vector2& tankPos, float tankWidth, flo
     for (int i = 0; i < 4; ++i) {
         if (CheckCollision(worldCorners[i])) return true;
     }
+    
+    // adiciona um ponto extra no centro frontal do tanque para colisao
+    Vector2 frontCenterPoint;
+    Vector2 backCenterPoint;
+    backCenterPoint.x = tankPos.x - halfW * cosB;
+    backCenterPoint.y = tankPos.y - halfW * sinB;
+    frontCenterPoint.x = tankPos.x + halfW * cosB;
+    frontCenterPoint.y = tankPos.y + halfW * sinB;
+    
+    if (CheckCollision(frontCenterPoint)) return true;
+    if (CheckCollision(backCenterPoint)) return true;
 
     // por simplicidade, estamos mantendo a mesma verificação de colisão para todos os tipos de alvo
     return false;
