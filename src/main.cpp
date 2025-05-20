@@ -285,7 +285,7 @@ void render()
    if (!g_editorMode) {
        g_powerUp.Update();
        g_powerUp.Render();
-       
+
        // Update the laser effect
        PowerUp::UpdateLaserEffect();
    }
@@ -343,7 +343,7 @@ void render()
                            g_tanque->isShieldInvulnerable = true; // Set flag for shield invulnerability
                            g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;
                            printf("Shield blocked damage from star enemy!\n");
-                           
+
                            // Kill the star target (always for shield)
                            target.active = false;
                        } else {
@@ -351,19 +351,19 @@ void render()
                            int damage = g_tanque->maxHealth / 2;
                            g_tanque->health -= damage;
                            if (g_tanque->health < 0) g_tanque->health = 0;
-                           
+
                            // Make tank temporarily invulnerable
                            g_tanque->isInvulnerable = true;
                            g_tanque->isShieldInvulnerable = false; // Regular damage
                            g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;
-                           
-                           printf("Tank hit by star enemy! Damage: %d, Health: %d/%d\n", 
+
+                           printf("Tank hit by star enemy! Damage: %d, Health: %d/%d\n",
                                 damage, g_tanque->health, g_tanque->maxHealth);
-                           
+
                            // Kill the star target
                            target.active = false;
                        }
-                       
+
                        // Increase score and destroyed targets count
                        g_playerScore += 150;  // More points for star enemies
                        g_destroyedTargets++;
@@ -378,7 +378,7 @@ void render()
                }
            }
        }
-       
+
        // Check for enemy projectiles hitting the tank
        if (!g_tanque->isInvulnerable) {
            for (auto& target : g_targets) {
@@ -409,13 +409,13 @@ void render()
                                    int damage = g_tanque->maxHealth / 8; // 12.5% damage per hit
                                    g_tanque->health -= damage;
                                    if (g_tanque->health < 0) g_tanque->health = 0;
-                                   
+
                                    // Make tank temporarily invulnerable
                                    g_tanque->isInvulnerable = true;
                                    g_tanque->isShieldInvulnerable = false; // Regular damage
                                    g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;
-                                   
-                                   printf("Tank hit by enemy projectile! Health: %d/%d\n", 
+
+                                   printf("Tank hit by enemy projectile! Health: %d/%d\n",
                                           g_tanque->health, g_tanque->maxHealth);
                                }
                            }
@@ -449,13 +449,13 @@ void render()
                // Get target position and projectile velocity before target is damaged
                Vector2 hitPosition = g_targets[hitTargetIndex].position;
                Vector2 hitVelocity = Vector2(0, 0);
-               
+
                if (hitProjectileIndex >= 0 && hitProjectileIndex < static_cast<int>(g_tanque->projectiles.size())) {
                    hitVelocity = g_tanque->projectiles[hitProjectileIndex].velocity;
                    // Create explosion at target hit location
                    g_tanque->explosions.CreateExplosion(hitPosition, hitVelocity, 25);
                }
-               
+
                // Apply damage to the target
                g_targets[hitTargetIndex].TakeDamage(1);
 
@@ -620,12 +620,14 @@ void mouse(int button, int state, int wheel, int direction, int x, int y)
    mouseX = x; //guarda as coordenadas do mouse para exibir dentro da render()
    mouseY = y;
 
-
-
    if (g_editorMode && g_track) {
        if (button == 0) { // Left mouse button
            if (state == 0) { // Pressed
                g_mousePressed = true;
+               if (!g_track->selectControlPoint(static_cast<float>(x), static_cast<float>(y))) {
+                   // If click was not on a point, deselect any selected point
+                   // g_track->deselectControlPoint(); // Or keep selected for adding new points relative to it
+               }
 
            } else { // Released
                g_mousePressed = false;
@@ -648,30 +650,12 @@ void mouse(int button, int state, int wheel, int direction, int x, int y)
    }
 
    if (g_editorMode && g_track && g_mousePressed && g_track->selectedPointIndex != -1) {
-       motion(static_cast<int>(x), static_cast<int>(y)); // Call motion to update position
+       g_track->moveSelectedControlPoint(static_cast<float>(x), static_cast<float>(y));
    }
 
 }
 
-// Function for mouse motion when a button is pressed (dragging)
-void motion(int x, int y)
-{
-    mouseX = x;
-    mouseY = y;
 
-    if (g_editorMode && g_track && g_mousePressed && g_track->selectedPointIndex != -1) {
-        g_track->moveSelectedControlPoint(static_cast<float>(x), static_cast<float>(y));
-    }
-    //glutPostRedisplay(); // Request redraw
-}
-
-// Function for mouse motion when no buttons are pressed (passive)
-void passiveMotion(int x, int y)
-{
-    mouseX = x;
-    mouseY = y;
-    //glutPostRedisplay(); // Request redraw if needed for hover effects etc.
-}
 
 // New function to reset tank position and orientation based on track
 void resetTankToTrackStart(Tanque* tanque, BSplineTrack* track) {
@@ -781,7 +765,5 @@ int main(void)
    }
 
    CV::init(&screenWidth, &screenHeight, "Tanque B-Spline - Editor: E, Switch: S, Add/Remove: +/-");
-   glutMotionFunc(motion); // Register mouse drag callback
-   glutPassiveMotionFunc(passiveMotion); // Register mouse move callback
    CV::run();
 }

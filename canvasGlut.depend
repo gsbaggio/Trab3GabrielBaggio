@@ -169,7 +169,7 @@
 	<string>
 	<cfloat>
 
-1747697988 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\main.cpp
+1747698993 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\main.cpp
 	<GL/glut.h>
 	<GL/freeglut_ext.h>
 	<math.h>
@@ -234,7 +234,7 @@
 	<cmath>
 	<vector>
 
-1747695399 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\powerup.cpp
+1747698056 source:c:\users\gabriel\desktop\cg\demos\trab3gabrielbaggio\src\powerup.cpp
 	"PowerUp.h"
 	"Tanque.h"
 	"Target.h"
