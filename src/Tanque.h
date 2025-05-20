@@ -8,9 +8,8 @@
 #include "BSplineTrack.h"
 #include "Projectile.h"
 #include "Target.h"
-#include "ExplosionManager.h" // Include ExplosionManager header
+#include "ExplosionManager.h" 
 
-// Define M_PI if not available (common on Windows with MSVC)
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -39,8 +38,8 @@ public:
     int collisionTimer; // Counts down frames for rebound
 
     // Collision constants
-    static const int COLLISION_REBOUND_FRAMES = 90; // Approx 1.5s at 60fps
-    static constexpr float REBOUND_SPEED_FACTOR = 0.3f; // 30% of normal speed for rebound
+    static const int COLLISION_REBOUND_FRAMES = 90; 
+    static constexpr float REBOUND_SPEED_FACTOR = 0.3f; 
 
     // Projectile related members
     int firingCooldown;
@@ -53,8 +52,8 @@ public:
     int maxHealth;
     bool isInvulnerable;
     int invulnerabilityTimer;
-    static const int INVULNERABILITY_FRAMES = 60; // 1 second at 60fps
-    bool isShieldInvulnerable; // Flag to track if invulnerability is from shield
+    static const int INVULNERABILITY_FRAMES = 60; 
+    bool isShieldInvulnerable; 
 
     // Add shield property
     bool hasShield;

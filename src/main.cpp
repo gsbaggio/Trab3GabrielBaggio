@@ -12,10 +12,7 @@
 #include "BSplineTrack.h"
 #include "Target.h"
 #include "Projectile.h"
-#include "PowerUp.h" // New include for power-ups
-
-void motion(int x, int y);
-void resetTankToTrackStart(Tanque* tanque, BSplineTrack* track); // Forward declaration
+#include "PowerUp.h" 
 
 //largura e altura inicial da tela . Alteram com o redimensionamento de tela.
 int screenWidth = 1280, screenHeight = 720;
@@ -26,32 +23,27 @@ BSplineTrack *g_track = NULL;
 bool g_editorMode = false;
 bool g_mousePressed = false;
 
-int mouseX, mouseY; //variaveis globais do mouse para poder exibir dentro da render().
+int mouseX, mouseY; //variaveis globais do mouse para utilizar em qualquer lugar
 
 // flags para guardar rotacao do tanque
 bool keyA_down = false;
 bool keyD_down = false;
 
-// Constants for targets
+// numero de alvos por nivel
 const int NUM_TARGETS = 5;
 
-// Global variables for game state
+// variaveis globais para o jogo
 std::vector<Target> g_targets;
 int g_playerScore = 0;
-int g_gameLevel = 1;  // Current game level
-int g_destroyedTargets = 0;  // Counter for destroyed targets in current level
-
-// Global variables for power-ups
+int g_gameLevel = 1;  
+int g_destroyedTargets = 0; 
 PowerUp g_powerUp;
 PowerUpType g_storedPowerUp = PowerUpType::None;
 
-// Function declarations
-void SpawnPowerUp(BSplineTrack* track); // Add this forward declaration
-
-// Modified function to avoid respawning near the tank or previous position
-Vector2 GenerateRandomTargetPosition(BSplineTrack* track, const Vector2& avoidPosition = Vector2(0,0), bool checkAvoidance = false) {
-    const int MAX_ATTEMPTS = 100;
-    const float MIN_SAFE_DISTANCE_SQ = 150.0f * 150.0f; // Min 150 pixels away from tank/previous position
+// gera uma posicao aleatoria no track, usada para gerar alvos e power ups
+Vector2 GenerateRandomPosTrack(BSplineTrack* track, const Vector2& avoidPosition = Vector2(0,0), bool checkAvoidance = false) {
+    const int MAX_ATTEMPTS = 1000; // maximo de tentativas para achar posicao
+    const float MIN_SAFE_DISTANCE_SQ = 150.0f * 150.0f; // pra nao spawn muito perto do tanque
 
     Vector2 position;
     int attempts = 0;
@@ -59,36 +51,32 @@ Vector2 GenerateRandomTargetPosition(BSplineTrack* track, const Vector2& avoidPo
     do {
         attempts++;
         if (attempts > MAX_ATTEMPTS) {
-            // If we've tried too many times without success, return the last generated position
-            printf("Warning: Could not find ideal target position after %d attempts\n", MAX_ATTEMPTS);
-            return position;
+            return position; // nao achou pos
         }
 
-        // Generate a random parameter value along the track (0.0 to 1.0)
         float t = static_cast<float>(rand()) / RAND_MAX;
 
-        // Get points on both left and right curves at this parameter
         Vector2 leftPoint = track->getPointOnCurve(t, CurveSide::Left);
         Vector2 rightPoint = track->getPointOnCurve(t, CurveSide::Right);
 
-        // Calculate a point between the curves with a random interpolation
-        float interpFactor = 0.2f + 0.6f * static_cast<float>(rand()) / RAND_MAX; // 0.2 to 0.8
+        // interpolacao entre os dois pontos
+        float interpFactor = 0.2f + 0.6f * static_cast<float>(rand()) / RAND_MAX; 
         position = leftPoint + (rightPoint - leftPoint) * interpFactor;
 
-        // Check distance to tank or previous position (if needed)
+        // checa se esta perto do tanque
         if (checkAvoidance) {
             float distSq = position.distSq(avoidPosition);
             if (distSq < MIN_SAFE_DISTANCE_SQ) {
-                continue; // Too close, try a different position
+                continue; 
             }
         }
 
-        // Check distance to other active targets
+        // checa distancia de outros alvos
         bool tooCloseToOtherTargets = false;
         for (const auto& target : g_targets) {
             if (target.active) {
                 float distSq = position.distSq(target.position);
-                if (distSq < 50.0f * 50.0f) { // Minimum distance of 50 pixels
+                if (distSq < 50.0f * 50.0f) { 
                     tooCloseToOtherTargets = true;
                     break;
                 }
@@ -96,70 +84,122 @@ Vector2 GenerateRandomTargetPosition(BSplineTrack* track, const Vector2& avoidPo
         }
 
         if (!tooCloseToOtherTargets) {
-            return position; // Found a good position
+            return position; 
         }
 
     } while (attempts <= MAX_ATTEMPTS);
 
-    // Fallback position if we can't find a good spot
+    // fallback caso nao ache posicao
     return Vector2(0, 0);
 }
 
-// Modified function to initialize or reset all targets with level-scaled health
+// spawna o tanque no inicio do track
+void resetTankToTrackStart(Tanque* tanque, BSplineTrack* track) {
+    if (!tanque || !track) {
+        printf("Error: Tank or Track is null in resetTankToTrackStart.\\\\n");
+        return;
+    }
+
+    Vector2 start_point_left, start_point_right;
+
+
+    // calcula a posicao inicial do tanque no track
+    start_point_left = track->getPointOnCurve(0.0f, CurveSide::Left);
+    start_point_right = track->getPointOnCurve(0.0f, CurveSide::Right);
+
+    tanque->position.set((start_point_left.x + start_point_right.x) / 2.0f,(start_point_left.y + start_point_right.y) / 2.0f);
+
+
+    // calcula a tangente do tanque no track (direcao que ele spawna)
+    Vector2 tangent_left = track->getTangentOnCurve(0.0f, CurveSide::Left);
+    Vector2 tangent_right = track->getTangentOnCurve(0.0f, CurveSide::Right);
+
+    Vector2 final_tangent;
+
+    Vector2 norm_tangent_left = tangent_left.normalized();
+    Vector2 norm_tangent_right = tangent_right.normalized();
+
+    if (norm_tangent_left.lengthSq() > 0.0001f && norm_tangent_right.lengthSq() > 0.0001f) {
+        final_tangent = (norm_tangent_left + norm_tangent_right).normalized();
+    } else if (norm_tangent_left.lengthSq() > 0.0001f) {
+        final_tangent = norm_tangent_left;
+    } else if (norm_tangent_right.lengthSq() > 0.0001f) {
+        final_tangent = norm_tangent_right;
+    }
+    tanque->baseAngle = atan2(final_tangent.y, final_tangent.x);
+
+
+    tanque->forwardVector.set(cos(tanque->baseAngle), sin(tanque->baseAngle));
+}
+
+// spawna um power-up no track
+void SpawnPowerUp(BSplineTrack* track) {
+    // se ja ativo ou ja existe, nao spawn
+    if (g_powerUp.active || g_storedPowerUp != PowerUpType::None) return;
+
+    // gera uma posicao aleatoria no track
+    Vector2 position = GenerateRandomPosTrack(track, g_tanque->position, true);
+
+    // escolhe um tipo de power-up aleatorio
+    int randType = rand() % 3 + 1; // 1-3
+    PowerUpType type = static_cast<PowerUpType>(randType);
+
+    // cria e ativa o power-up
+    g_powerUp = PowerUp(position, type);
+}
+
+// inicializa os alvos do jogo
 void InitializeTargets(BSplineTrack* track) {
     g_targets.clear();
-    g_destroyedTargets = 0;  // Reset the destroyed targets counter
+    g_destroyedTargets = 0; 
 
-    // Create NUM_TARGETS targets
+    // cria os alvos
     for (int i = 0; i < NUM_TARGETS; i++) {
-        // Find a good position for the target
-        Vector2 position = GenerateRandomTargetPosition(track, g_tanque->position, true);
+        // encontra uma boa posição para o alvo
+        Vector2 position = GenerateRandomPosTrack(track, g_tanque->position, true);
 
-        // Determine target type based on game level and position in array
-        TargetType targetType = TargetType::Basic; // Default is basic
+        
+        TargetType targetType = TargetType::Basic; 
 
-        // Higher levels have more varied enemies
+        // aleatoriamente escolhe o tipo de alvo
         float rand_val = (float)rand() / RAND_MAX;
 
+        // dependendo do nivel, escolhe o tipo de alvo de forma diferente
         if (g_gameLevel >= 3 && i == NUM_TARGETS - 1) {
-            // From level 3, last enemy is always a Star
             targetType = TargetType::Star;
         }
         else if (g_gameLevel >= 2 && i == NUM_TARGETS - 2) {
-            // From level 2, second-to-last enemy is always a Shooter
             targetType = TargetType::Shooter;
         }
         else if (g_gameLevel >= 4 && rand_val < 0.3f) {
-            // From level 4, 30% chance for any other enemy to be a Star
             targetType = TargetType::Star;
         }
         else if (g_gameLevel >= 2 && rand_val < 0.4f) {
-            // From level 2, 40% chance for remaining enemies to be Shooters
             targetType = TargetType::Shooter;
         }
 
-        // Create the target with health scaled to current level
+        // cria o alvo de fato
         Target target(position, targetType);
         target.active = true;
 
-        // Scale health with game level: base health (2) + additional health based on level
+        // vida aumenta com o nivel
         target.maxHealth = 2 + (g_gameLevel - 1);
 
-        // Shooter types get +1 health
+        // shooter tem +1 de vida
         if (target.type == TargetType::Shooter) {
             target.maxHealth += 1;
         }
-        // Star types get +2 health and custom movement properties
+        // estrela tem +2 de vida
         else if (target.type == TargetType::Star) {
             target.maxHealth += 2;
 
-            // Stars move more slowly but still scale with level
-            target.moveSpeed = 0.5f + (g_gameLevel * 0.1f);  // Much slower base speed
+            // estrela move mais rapido com o nivel
+            target.moveSpeed = 0.5f + (g_gameLevel * 0.1f);
 
-            // Stars detect from further away at higher levels
+            // estrelas detectam de mais longe em niveis mais altos
             target.detectionRadius = 150.0f + (g_gameLevel * 25.0f);
 
-            // Rotation speed increases slightly with level
+            // a velocidade de rotação aumenta ligeiramente com o nível
             target.rotationSpeed = 0.05f + (g_gameLevel - 1) * 0.01f;
         }
 
@@ -168,51 +208,15 @@ void InitializeTargets(BSplineTrack* track) {
         g_targets.push_back(target);
     }
 
-    // Count special targets for log message
-    int shooterCount = 0;
-    int starCount = 0;
-    for (const auto& target : g_targets) {
-        if (target.type == TargetType::Shooter) shooterCount++;
-        else if (target.type == TargetType::Star) starCount++;
-    }
-
-    printf("Level %d started with %d targets (%d shooters, %d stars)\n",
-           g_gameLevel, NUM_TARGETS, shooterCount, starCount);
-
-    // Always spawn a power-up when initializing targets if none exists
     SpawnPowerUp(track);
 }
 
-// Function to spawn a random power-up
-void SpawnPowerUp(BSplineTrack* track) {
-    // Only spawn if no active power-up exists and no stored power-up
-    if (g_powerUp.active || g_storedPowerUp != PowerUpType::None) return;
-
-    if (!track || track->controlPointsLeft.size() < 4 || track->controlPointsRight.size() < 4) {
-        printf("Warning: Cannot spawn power-up, track is not properly initialized\n");
-        return;
-    }
-
-    // Generate a random position on the track
-    Vector2 position = GenerateRandomTargetPosition(track, g_tanque->position, true);
-
-    // Choose a random power-up type
-    int randType = rand() % 3 + 1; // 1-3
-    PowerUpType type = static_cast<PowerUpType>(randType);
-
-    // Create and activate the power-up
-    g_powerUp = PowerUp(position, type);
-    printf("PowerUp spawned: %s at position (%.1f, %.1f)\n",
-           PowerUp::GetTypeName(type), position.x, position.y);
-}
-
-// Function to reset the game state
+// reseta tudo
 void ResetGameState(Tanque* tanque, BSplineTrack* track) {
     g_playerScore = 0;
-    g_gameLevel = 1;  // Reset level to 1
-    g_destroyedTargets = 0;  // Reset destroyed targets counter
+    g_gameLevel = 1;  
+    g_destroyedTargets = 0;  
 
-    // Reset tank health
     if (tanque) {
         tanque->health = tanque->maxHealth;
         tanque->isInvulnerable = false;
@@ -221,15 +225,13 @@ void ResetGameState(Tanque* tanque, BSplineTrack* track) {
 
     InitializeTargets(track);
 
-    // Reset power-ups
     g_powerUp.active = false;
     g_storedPowerUp = PowerUpType::None;
 
-    // Spawn a new power-up
     SpawnPowerUp(track);
 }
 
-// Implement UsePowerUp function
+// uso do power up
 void UsePowerUp(Tanque* tank, std::vector<Target>& targets) {
     if (!tank || g_storedPowerUp == PowerUpType::None) return;
 
@@ -245,13 +247,13 @@ void UsePowerUp(Tanque* tank, std::vector<Target>& targets) {
         case PowerUpType::Laser: {
             int targetsDestroyed = PowerUp::ApplyLaserEffect(tank, targets);
 
-            // Update score and destroyed targets count for each destroyed target
+            
             g_playerScore += targetsDestroyed * 100;
             g_destroyedTargets += targetsDestroyed;
 
-            // Check if all targets have been destroyed
+            
             if (g_destroyedTargets >= NUM_TARGETS) {
-                // Level complete - advance to next level
+                
                 g_gameLevel++;
                 InitializeTargets(g_track);
             }
@@ -262,7 +264,7 @@ void UsePowerUp(Tanque* tank, std::vector<Target>& targets) {
             break;
     }
 
-    // Clear the stored power-up after use
+    // remove o power-up depois de usar
     g_storedPowerUp = PowerUpType::None;
 }
 
@@ -271,60 +273,62 @@ void UsePowerUp(Tanque* tank, std::vector<Target>& targets) {
 //Deve-se manter essa funo com poucas linhas de codigo
 void render()
 {
-   CV::clear(0.25f, 0.25f, 0.3f); // Changed to dark asphalt gray (former road color)
+   CV::clear(0.25f, 0.25f, 0.3f);
 
+
+   // pra seguir o tanque a tela
    if(!g_editorMode){
     CV::translate(-g_tanque->position.x + screenWidth/2, -g_tanque->position.y + screenHeight/2);
    }
 
+   // renderiza o track
    if (g_track) {
        g_track->Render(g_editorMode);
    }
 
-   // Update and render power-up - MOVED HERE for proper rendering order
+   // renderiza power ups
    if (!g_editorMode) {
        g_powerUp.Update();
        g_powerUp.Render();
 
-       // Update the laser effect
+
        PowerUp::UpdateLaserEffect();
    }
 
-   // Render targets
+   // renderiza os inimigos
    if (!g_editorMode) {
        for (auto& target : g_targets) {
            target.Render();
        }
    }
 
-   // Render the laser effect (should be rendered after targets but before the tank)
+   // renderiza o efeito do laser (deve ser renderizado após os inimigos, mas antes do tanque)
    if (!g_editorMode) {
        PowerUp::RenderLaserEffect();
    }
 
-   // Update and Render Tank only if not in editor mode
+   // renderiza o tanque fora do editor
    if (!g_editorMode && g_tanque) {
        g_tanque->Update(static_cast<float>(mouseX + g_tanque->position.x - screenWidth/2),
                        static_cast<float>(mouseY + g_tanque->position.y - screenHeight/2),
                        keyA_down, keyD_down, g_track);
 
-       // Update all targets
+       // att os targets
        for (auto& target : g_targets) {
            target.Update(g_tanque->position, g_track);
        }
 
-       // Check if tank collects power-up
+       // checa se ele pegou o power-up
        if (g_powerUp.active && g_powerUp.CheckCollection(g_tanque->position, g_tanque->baseWidth/2.0f)) {
-           // Store the power-up type and deactivate the power-up
+           // armazena o tipo de power-up e desativa ele do chao
            g_storedPowerUp = g_powerUp.type;
            g_powerUp.active = false;
 
-           printf("PowerUp collected: %s\n", PowerUp::GetTypeName(g_storedPowerUp));
        }
 
-       // Check for shielded tank when taking damage
+       // checa dano
        if (!g_tanque->isInvulnerable) {
-           // Check for star targets hitting the tank
+           // a estrela deve dar muito dano, checa colisao com ela
            for (size_t i = 0; i < g_targets.size(); i++) {
                Target& target = g_targets[i];
                if (target.active && target.type == TargetType::Star) {
@@ -334,43 +338,37 @@ void render()
                    float combinedRadius = g_tanque->baseWidth/2.0f + target.radius;
 
                    if (distSq < combinedRadius * combinedRadius) {
-                       // Check if shield is active
+                       // checa escudo
                        if (g_tanque->hasShield) {
-                           // Shield blocks damage
-                           g_tanque->hasShield = false; // Consume the shield
-                           // Make tank temporarily invulnerable and flash
+                           g_tanque->hasShield = false; 
                            g_tanque->isInvulnerable = true;
-                           g_tanque->isShieldInvulnerable = true; // Set flag for shield invulnerability
+                           g_tanque->isShieldInvulnerable = true; 
                            g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;
-                           printf("Shield blocked damage from star enemy!\n");
+                           
 
-                           // Kill the star target (always for shield)
+                           // a estrela sempre morre ao bater no tanque
                            target.active = false;
                        } else {
-                           // No shield, apply normal damage
+                           // aplica o dano normal da estrela
                            int damage = g_tanque->maxHealth / 2;
                            g_tanque->health -= damage;
                            if (g_tanque->health < 0) g_tanque->health = 0;
 
-                           // Make tank temporarily invulnerable
+                           
                            g_tanque->isInvulnerable = true;
-                           g_tanque->isShieldInvulnerable = false; // Regular damage
+                           g_tanque->isShieldInvulnerable = false; 
                            g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;
 
-                           printf("Tank hit by star enemy! Damage: %d, Health: %d/%d\n",
-                                damage, g_tanque->health, g_tanque->maxHealth);
-
-                           // Kill the star target
+                           // a estrela sempre morre ao bater no tanque
                            target.active = false;
                        }
 
-                       // Increase score and destroyed targets count
-                       g_playerScore += 150;  // More points for star enemies
+                       // a estrela morre, entao ganha pontos e aumenta o contador
+                       g_playerScore += 100;  
                        g_destroyedTargets++;
 
-                       // Check if all targets have been destroyed
+                       // checa se todos morreram e passa o level
                        if (g_destroyedTargets >= NUM_TARGETS) {
-                           // Level complete - advance to next level
                            g_gameLevel++;
                            InitializeTargets(g_track);
                        }
@@ -379,40 +377,40 @@ void render()
            }
        }
 
-       // Check for enemy projectiles hitting the tank
+       // checa projeteis no tanque
        if (!g_tanque->isInvulnerable) {
            for (auto& target : g_targets) {
                if (target.active && target.type == TargetType::Shooter) {
-                   for (auto& proj : target.projectiles) {
+                   for (auto& proj : target.projectiles) { // passa por todos os projeteis dos shooters
                        if (proj.active) {
-                           // Simple circular collision with tank center
+                            // checa se o projeteis colide com o tanque
                            float dx = proj.position.x - g_tanque->position.x;
                            float dy = proj.position.y - g_tanque->position.y;
                            float distSq = dx*dx + dy*dy;
                            float combinedRadius = g_tanque->baseWidth/2.0f + proj.radius;
 
                            if (distSq < combinedRadius * combinedRadius) {
-                               // Tank hit by enemy projectile
+                               
                                proj.active = false;
 
-                               // Check if shield is active
+                               // checa escudo
                                if (g_tanque->hasShield) {
-                                   // Shield blocks damage
-                                   g_tanque->hasShield = false; // Consume the shield
-                                   // Make tank temporarily invulnerable and flash
+                                   
+                                   g_tanque->hasShield = false; 
+                                   
                                    g_tanque->isInvulnerable = true;
-                                   g_tanque->isShieldInvulnerable = true; // Set flag for shield invulnerability
+                                   g_tanque->isShieldInvulnerable = true; 
                                    g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;
-                                   printf("Shield blocked damage from enemy projectile!\n");
+                                   
                                } else {
-                                   // Apply damage to tank
-                                   int damage = g_tanque->maxHealth / 8; // 12.5% damage per hit
+                                   // sem escudo, aplica dano
+                                   int damage = g_tanque->maxHealth / 8; 
                                    g_tanque->health -= damage;
                                    if (g_tanque->health < 0) g_tanque->health = 0;
 
-                                   // Make tank temporarily invulnerable
+                                   
                                    g_tanque->isInvulnerable = true;
-                                   g_tanque->isShieldInvulnerable = false; // Regular damage
+                                   g_tanque->isShieldInvulnerable = false; 
                                    g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;
 
                                    printf("Tank hit by enemy projectile! Health: %d/%d\n",
@@ -425,50 +423,50 @@ void render()
            }
        }
 
-       // Check for tank collision with targets - now catching the return value
+       // checa colisao do tanque com os alvos normais
        int destroyedTargetIndex = g_tanque->CheckTargetCollisions(g_targets);
        if (destroyedTargetIndex >= 0) {
-           // Target was destroyed by tank collision - increase score
+           // alvo e destruido com colisao
            g_playerScore += 100;
            g_destroyedTargets++;
 
-           // Check if all targets have been destroyed
+           // checa se todos morreram e passa o level
            if (g_destroyedTargets >= NUM_TARGETS) {
-               // Level complete - advance to next level
+               
                g_gameLevel++;
-               InitializeTargets(g_track);  // Spawn new wave with increased health
+               InitializeTargets(g_track); 
            }
        }
 
-       // Check for projectile-target collisions
+       // checa projeteis do tanque contra os alvos
        int hitTargetIndex = -1;
        int hitProjectileIndex = -1;
        if (g_tanque->CheckAllProjectilesAgainstTargets(g_targets, hitTargetIndex, hitProjectileIndex)) {
-           // Apply damage to target when hit by projectile
+           // aplica o dano ao alvo
            if (hitTargetIndex >= 0 && hitTargetIndex < static_cast<int>(g_targets.size())) {
-               // Get target position and projectile velocity before target is damaged
+               // pega a posicao do alvo e a o vetor do projetil pra explosao
                Vector2 hitPosition = g_targets[hitTargetIndex].position;
                Vector2 hitVelocity = Vector2(0, 0);
 
                if (hitProjectileIndex >= 0 && hitProjectileIndex < static_cast<int>(g_tanque->projectiles.size())) {
                    hitVelocity = g_tanque->projectiles[hitProjectileIndex].velocity;
-                   // Create explosion at target hit location
+                   // cria a explosao na posicao do alvo
                    g_tanque->explosions.CreateExplosion(hitPosition, hitVelocity, 25);
                }
 
-               // Apply damage to the target
+               // aplica dano ao alvo
                g_targets[hitTargetIndex].TakeDamage(1);
 
-               // If target was destroyed (health reached 0)
+               // se o alvo morreu, da ponto e aumenta o contador
                if (!g_targets[hitTargetIndex].active) {
                    g_playerScore += 100;
                    g_destroyedTargets++;
 
-                   // Check if all targets have been destroyed
+                   
                    if (g_destroyedTargets >= NUM_TARGETS) {
-                       // Level complete - advance to next level
+                       
                        g_gameLevel++;
-                       InitializeTargets(g_track);  // Spawn new wave with increased health
+                       InitializeTargets(g_track);  
                    }
                }
            }
@@ -478,69 +476,54 @@ void render()
            }
        }
 
-       // Check for game over condition
-       if (g_tanque->health <= 0) {
-           CV::color(1.0f, 0.0f, 0.0f);
-           char gameOverText[100];
-           sprintf(gameOverText, "GAME OVER! Final Score: %d - Press 'E' to restart", g_playerScore);
-
-           // Need to undo the translation for game over text to show on screen
-           CV::translate(g_tanque->position.x - screenWidth/2, g_tanque->position.y - screenHeight/2);
-           CV::text(screenWidth/2 - 180, screenHeight/2, gameOverText);
-           CV::translate(-g_tanque->position.x + screenWidth/2, -g_tanque->position.y + screenHeight/2);
-       }
-
        g_tanque->Render();
-   } else if (g_editorMode && g_tanque) {
-       // In editor mode, show the tank at its potential spawn position and orientation.
-       // This position is derived from the start of the track.
-       if (g_track && g_track->controlPointsLeft.size() >= g_track->MIN_CONTROL_POINTS_PER_CURVE && g_track->controlPointsRight.size() >= g_track->MIN_CONTROL_POINTS_PER_CURVE) {
+    } else if (g_editorMode && g_tanque) {
+       // no editar, coloca so a posicao inicial que o tanque spawnaria
+       if (g_track) {
            Vector2 pL = g_track->getPointOnCurve(0.0f, CurveSide::Left);
            Vector2 pR = g_track->getPointOnCurve(0.0f, CurveSide::Right);
-           g_tanque->position = (pL + pR) * 0.5f; // Center of track start
+           g_tanque->position = (pL + pR) * 0.5f; 
 
            Vector2 tangentL = g_track->getTangentOnCurve(0.0f, CurveSide::Left);
            Vector2 tangentR = g_track->getTangentOnCurve(0.0f, CurveSide::Right);
            Vector2 avgTangent = (tangentL + tangentR) * 0.5f;
 
-           if (avgTangent.lengthSq() > 0.001f) { // Check if tangent is reasonably valid
+           if (avgTangent.lengthSq() > 0.001f) { 
                avgTangent.normalize();
                g_tanque->baseAngle = atan2(avgTangent.y, avgTangent.x);
            } else {
-               g_tanque->baseAngle = 0.0f; // Default orientation if tangent is not clear
+               g_tanque->baseAngle = 0.0f; 
            }
-           g_tanque->topAngle = g_tanque->baseAngle; // Align turret with base
+           g_tanque->topAngle = g_tanque->baseAngle; 
            g_tanque->forwardVector.set(cos(g_tanque->baseAngle), sin(g_tanque->baseAngle));
        }
-       g_tanque->Render(); // Render the tank statically
-   }
-
-
-   // Draw player score at top-left (BEFORE translate to keep it fixed on screen)
-   char scoreText[100]; // Increased buffer size to accommodate level information
-   char powerText[100];
-   if(!g_editorMode){
-    CV::translate(0, 0);
-    sprintf(scoreText, "Score: %d | Level: %d | Targets: %d/%d",
-            g_playerScore, g_gameLevel, g_destroyedTargets, NUM_TARGETS);
-    CV::color(1.0f, 1.0f, 1.0f);
-    CV::text(10, 40, scoreText);
-
-    // Display stored power-up info
-    sprintf(powerText, "PowerUp: %s", PowerUp::GetTypeName(g_storedPowerUp));
-    CV::text(10, 60, powerText);
-
-    // Remove the shield text display since shield is shown visually on the tank
-    // Note: We keep the check for consistency but just don't display the text
-    if (g_tanque && g_tanque->hasShield) {
-        // Shield is now displayed visually on the tank
+       g_tanque->Render();
     }
 
-    CV::text(10, 20, "Modo de Jogo | A/D = Girar | 'E' = Editor | 'M1' = Tiro | 'M2' = Poder");
+    // textos na tela
+    char scoreText[100]; 
+    char powerText[100];
+    if(!g_editorMode){
+        CV::translate(0, 0);
+        sprintf(scoreText, "Score: %d | Level: %d | Targets: %d/%d", g_playerScore, g_gameLevel, g_destroyedTargets, NUM_TARGETS);
+        CV::color(1.0f, 1.0f, 1.0f);
+        CV::text(10, 40, scoreText);
+
+        sprintf(powerText, "PowerUp: %s", PowerUp::GetTypeName(g_storedPowerUp));
+        CV::text(10, 60, powerText);
+
+        CV::text(10, 20, "Modo de Jogo | A/D = Girar | 'E' = Editor | 'M1' = Tiro | 'M2' = Poder");
+
+        // checa game over
+        if (g_tanque->health <= 0) {
+            CV::color(1.0f, 0.0f, 0.0f);
+            char gameOverText[100];
+            sprintf(gameOverText, "GAME OVER! Final Score: %d - Pressione 'E' para reiniciar!", g_playerScore);
+            CV::text(screenWidth/2 - 180, screenHeight/2, gameOverText);
+        }
    }
 
-   Sleep(10); // This introduces a fixed delay
-   glutPostRedisplay(); // Request a redraw for the next frame
+   Sleep(10); 
 }
 
 //funcao chamada toda vez que uma tecla for pressionada.
@@ -550,7 +533,7 @@ void keyboard(int key)
 
    switch(key)
    {
-      case 27: // ESC
+      case 27: // esc sai do jogo
 	     exit(0);
 	  break;
 
@@ -572,20 +555,21 @@ void keyboard(int key)
       case 'E':
           g_editorMode = !g_editorMode;
           if (!g_editorMode) {
-              // Reset game state when exiting editor
-              if(g_track) g_track->deselectControlPoint();
-              // Reset tank to track start when exiting editor mode
+              
+              if(g_track){
+                g_track->deselectControlPoint();
+              }
+              
               resetTankToTrackStart(g_tanque, g_track);
-              // Reset score, tank health, and targets
+              
               ResetGameState(g_tanque, g_track);
           } else {
               keyA_down = false;
               keyD_down = false;
           }
-          printf("Editor mode: %s\n", g_editorMode ? "ON" : "OFF");
           break;
 
-      case 's': // Switch active curve for editing
+      case 's': 
       case 'S':
           if (g_editorMode && g_track) {
               g_track->switchActiveEditingCurve();
@@ -617,153 +601,53 @@ void keyboardUp(int key)
 //funcao para tratamento de mouse: cliques, movimentos e arrastos
 void mouse(int button, int state, int wheel, int direction, int x, int y)
 {
-   mouseX = x; //guarda as coordenadas do mouse para exibir dentro da render()
+   mouseX = x; //guarda as coordenadas do mouse para utilizar em outras funcs
    mouseY = y;
 
-   if (g_editorMode && g_track) {
-       if (button == 0) { // Left mouse button
-           if (state == 0) { // Pressed
+   if (g_editorMode && g_track) { // verifica os arratos dos pontos de controle
+       if (button == 0) {
+           if (state == 0) { 
                g_mousePressed = true;
                if (!g_track->selectControlPoint(static_cast<float>(x), static_cast<float>(y))) {
-                   // If click was not on a point, deselect any selected point
-                   // g_track->deselectControlPoint(); // Or keep selected for adding new points relative to it
+                   
                }
-
-           } else { // Released
+           } else { 
                g_mousePressed = false;
 
            }
        }
    }
    else if (!g_editorMode && g_tanque) {
-       if (button == 0 && state == 0) { // Left mouse button pressed
-           // Fire projectile using the tank's current turret angle (no teleporting)
+       if (button == 0 && state == 0) { // TIRO
            bool fired = g_tanque->FireProjectile();
-           if (fired) {
-               printf("Tank fired projectile!\n");
-           }
        }
-       else if (button == 2 && state == 0) { // Right mouse button pressed
-            // Use stored power-up
+       else if (button == 2 && state == 0) { // PODER
             UsePowerUp(g_tanque, g_targets);
         }
    }
 
-   if (g_editorMode && g_track && g_mousePressed && g_track->selectedPointIndex != -1) {
+   if (g_editorMode && g_track && g_mousePressed && g_track->selectedPointIndex != -1) { // arrasto do ponto de controle
        g_track->moveSelectedControlPoint(static_cast<float>(x), static_cast<float>(y));
    }
 
 }
 
-
-
-// New function to reset tank position and orientation based on track
-void resetTankToTrackStart(Tanque* tanque, BSplineTrack* track) {
-    if (!tanque || !track) {
-        printf("Error: Tank or Track is null in resetTankToTrackStart.\\\\n");
-        return;
-    }
-
-    Vector2 start_point_left, start_point_right;
-    bool position_calculated = false;
-
-    // Try to get points on the actual spline curves at t=0
-    if (track->controlPointsLeft.size() >= track->MIN_CONTROL_POINTS_PER_CURVE &&
-        track->controlPointsRight.size() >= track->MIN_CONTROL_POINTS_PER_CURVE) {
-
-        start_point_left = track->getPointOnCurve(0.0f, CurveSide::Left);
-        start_point_right = track->getPointOnCurve(0.0f, CurveSide::Right);
-
-        tanque->position.set((start_point_left.x + start_point_right.x) / 2.0f,
-                             (start_point_left.y + start_point_right.y) / 2.0f);
-        position_calculated = true;
-        printf("Tank positioned at midpoint of initial B-Spline curve points.\\\\n");
-
-    } else {
-        // Fallback to using the first control points if splines are not yet defined
-        printf("Warning: Not enough control points for full B-Spline definition at track start (L:%zu, R:%zu, MinPerCurve:%d).\\\\n",
-               track->controlPointsLeft.size(), track->controlPointsRight.size(), track->MIN_CONTROL_POINTS_PER_CURVE);
-        printf("Attempting to position tank at midpoint of L0/R0 control points as fallback.\\\\n");
-
-        if (!track->controlPointsLeft.empty() && !track->controlPointsRight.empty()) {
-            start_point_left = track->controlPointsLeft[0];
-            start_point_right = track->controlPointsRight[0];
-            tanque->position.set((start_point_left.x + start_point_right.x) / 2.0f,
-                                 (start_point_left.y + start_point_right.y) / 2.0f);
-            position_calculated = true;
-        } else {
-            printf("Error: Fallback L0/R0 control points are also missing. Tank cannot be positioned.\\\\n");
-            return;
-        }
-    }
-
-    // Orientation calculation
-    if (track->controlPointsLeft.size() >= track->MIN_CONTROL_POINTS_PER_CURVE &&
-        track->controlPointsRight.size() >= track->MIN_CONTROL_POINTS_PER_CURVE) {
-
-        Vector2 tangent_left = track->getTangentOnCurve(0.0f, CurveSide::Left);
-        Vector2 tangent_right = track->getTangentOnCurve(0.0f, CurveSide::Right);
-
-        Vector2 final_tangent;
-        bool tangent_calculated = false;
-
-        Vector2 norm_tangent_left = tangent_left.normalized();
-        Vector2 norm_tangent_right = tangent_right.normalized();
-
-        if (norm_tangent_left.lengthSq() > 0.0001f && norm_tangent_right.lengthSq() > 0.0001f) {
-            final_tangent = (norm_tangent_left + norm_tangent_right).normalized();
-            if (final_tangent.lengthSq() > 0.0001f) {
-                tangent_calculated = true;
-            }
-        } else if (norm_tangent_left.lengthSq() > 0.0001f) {
-            final_tangent = norm_tangent_left;
-            tangent_calculated = true;
-        } else if (norm_tangent_right.lengthSq() > 0.0001f) {
-            final_tangent = norm_tangent_right;
-            tangent_calculated = true;
-        }
-
-        if (tangent_calculated) {
-            tanque->baseAngle = atan2(final_tangent.y, final_tangent.x);
-        } else {
-            tanque->baseAngle = 0.0f;
-            printf("Warning: Could not determine track orientation from tangents for tank. Defaulting angle.\\\\n");
-        }
-    } else {
-        tanque->baseAngle = 0.0f;
-        printf("Warning: Not enough control points for tangent calculation in resetTankToTrackStart. Defaulting angle.\\\\n");
-    }
-
-    tanque->forwardVector.set(cos(tanque->baseAngle), sin(tanque->baseAngle));
-
-    if (position_calculated) {
-        printf("Tank (re)positioned to (%.2f, %.2f), angle: %.2f rad\\\\n",
-               tanque->position.x, tanque->position.y, tanque->baseAngle);
-    } else {
-        // This case should ideally be caught by the return earlier if L0/R0 are also missing.
-        printf("Error: Tank position could not be calculated in resetTankToTrackStart.\\\\n");
-    }
-}
-
-
 int main(void)
 {
-   srand(static_cast<unsigned int>(time(NULL))); // Initialize random seed
+   srand(static_cast<unsigned int>(time(NULL))); // randoms
 
    g_tanque = new Tanque(screenWidth / 4.0f, screenHeight / 2.0f, 0.7f, 0.02f);
    g_track = new BSplineTrack(true);
 
-   // Reset tank to the start of the track after creation
+   // inicializa o tanque, os targets e um power-up
    resetTankToTrackStart(g_tanque, g_track);
 
-   // Initialize targets
    InitializeTargets(g_track);
 
-   // Make sure a power-up spawns at start
    if (!g_powerUp.active) {
        SpawnPowerUp(g_track);
    }
 
-   CV::init(&screenWidth, &screenHeight, "Tanque B-Spline - Editor: E, Switch: S, Add/Remove: +/-");
+   CV::init(&screenWidth, &screenHeight, "GTA VI - Tanque Edition");
    CV::run();
 }

@@ -1,10 +1,9 @@
 #include "Tanque.h"
 #include "gl_canvas2d.h"
-#include <cmath> // For M_PI, cos, sin, atan2
-#include <algorithm> // For std::remove_if
-#include "BSplineTrack.h" // Added this include
+#include <cmath> 
+#include <algorithm> 
+#include "BSplineTrack.h" 
 
-// Define M_PI if not available (common on Windows with MSVC)
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -31,8 +30,8 @@ Tanque::Tanque(float x, float y, float initialSpeed, float initialRotationRate) 
 
     // Initialize projectile related members
     firingCooldown = 0;
-    firingCooldownReset = 45; // ~0.75 seconds at 60fps
-    projectileSpeed = 3.5f;  // Decreased from 7.0f to 4.0f
+    firingCooldownReset = 45; 
+    projectileSpeed = 3.5f;  
 
     // Initialize health related members
     health = 100;
@@ -64,7 +63,6 @@ void Tanque::Update(float mouseX, float mouseY, bool rotateLeft, bool rotateRigh
         collisionTimer--;
         if (collisionTimer <= 0) {
             isColliding = false;
-            printf("Rebound finished.\n");
         }
 
         // Turret can still aim during rebound
@@ -117,11 +115,8 @@ void Tanque::Update(float mouseX, float mouseY, bool rotateLeft, bool rotateRigh
     Vector2 currentActualPosition = position;
     position = tentativePosition;
 
-    CheckCollisionAndRespond(track); // This method might revert position to lastSafePosition and set isColliding
+    CheckCollisionAndRespond(track); 
 
-    // If a collision occurred, position was reset by CheckCollisionAndRespond.
-    // The rebound will start in the next Update call.
-    // If no collision, position remains the new tentativePosition.
 
     // Update top (turret) angle to point towards the mouse
     float dx = mouseX - position.x; // Use the (potentially reverted) position
@@ -347,9 +342,6 @@ void Tanque::CheckCollisionAndRespond(BSplineTrack* track) {
     ClosestPointInfo cpiRight = track->findClosestPointOnCurve(currentTankPosition, CurveSide::Right);
 
     bool collisionThisFrame = false;
-    // Store projections for debugging if needed, ensure they are initialized.
-    // float max_proj_left_debug = -FLT_MAX;
-    // float max_proj_right_debug = -FLT_MAX;
 
     // Check collision with Left Curve
     if (cpiLeft.isValid) {
@@ -361,8 +353,6 @@ void Tanque::CheckCollisionAndRespond(BSplineTrack* track) {
                 max_projection_left = projection;
             }
         }
-        // Assuming cpiLeft.normal points "outward" from the track (to the left of the LeftCurve).
-        // If any corner's projection is positive, it's on the "outside".
         if (max_projection_left > 0.0f) {
             collisionThisFrame = true;
         }
@@ -370,10 +360,6 @@ void Tanque::CheckCollisionAndRespond(BSplineTrack* track) {
 
     // Check collision with Right Curve
     if (!collisionThisFrame && cpiRight.isValid) {
-        // cpiRight.normal is the "left normal" of the RightCurve.
-        // A collision occurs if any tank corner is to the "right" of the RightCurve.
-        // This means the projection of (corner - closest_point_on_curve) onto normal_R should be negative.
-        // We look for the most negative projection (min_projection_right).
         float min_projection_right = FLT_MAX;
         for (int i = 0; i < 4; ++i) {
             Vector2 vec_corner_to_cr_point = world_corners[i] - cpiRight.point;
@@ -382,8 +368,6 @@ void Tanque::CheckCollisionAndRespond(BSplineTrack* track) {
                 min_projection_right = projection;
             }
         }
-        // If the smallest projection (most "to the right" relative to N_R) is negative,
-        // it means a part of the tank is to the right of the RightCurve (outside the track).
         if (min_projection_right < 0.0f) {
             collisionThisFrame = true;
         }
@@ -416,10 +400,6 @@ void Tanque::CheckCollisionAndRespond(BSplineTrack* track) {
                 invulnerabilityTimer = INVULNERABILITY_FRAMES;
             }
         }
-    } else {
-        // No new collision detected by this check.
-        // If isColliding was true due to an ongoing rebound, Update() handles the timer.
-        // If timer runs out, Update() sets isColliding = false.
     }
 }
 

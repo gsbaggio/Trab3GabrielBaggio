@@ -163,4 +163,4 @@ public:
     }
 };
 
-#endif // __EXPLOSION_MANAGER_H__
+#endif 

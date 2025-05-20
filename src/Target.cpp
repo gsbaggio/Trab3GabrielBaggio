@@ -1,7 +1,7 @@
 #include "Target.h"
 #include "BSplineTrack.h"
 #include <cmath>
-#include <algorithm> // For std::max/std::min
+#include <algorithm> 
 
 Target::Target()
     : active(false), radius(12.0f), health(2), maxHealth(2), type(TargetType::Basic),
@@ -173,18 +173,15 @@ void Target::RenderStarTarget() {
     
     // We need 10 points total (5 outer points and 5 inner points)
     Vector2 points[numPoints * 2];
-    float angle = rotationAngle - M_PI/2; // Start at top (subtract PI/2)
+    float angle = rotationAngle - M_PI/2; 
     
     // Draw points in a clockwise order, alternating between outer and inner points
     for (int i = 0; i < numPoints * 2; i++) {
         float r = (i % 2 == 0) ? outerRadius : innerRadius;
         
-        // For a 5-pointed star, we need to advance by 36 degrees (PI/5) for each point
-        // We use 2*PI/numPoints for outer points and then add an offset for inner points
         points[i].x = position.x + r * cos(angle);
         points[i].y = position.y + r * sin(angle);
         
-        // The key is to alternate the angle by PI/numPoints (36°) for a 5-point star
         angle += M_PI / numPoints;
     }
 
@@ -302,7 +299,6 @@ void Target::UpdateProjectiles(BSplineTrack* track) {
     );
 }
 
-// Implementation of EnemyProjectile::CheckCollisionWithTrack
 bool EnemyProjectile::CheckCollisionWithTrack(BSplineTrack* track) {
     if (!active || !track) return false;
 

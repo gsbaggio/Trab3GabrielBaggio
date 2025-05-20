@@ -1,23 +1,21 @@
 #include "BSplineTrack.h"
 #include <vector>
-#include <cmath>       // For floor
-#include <algorithm>   // For std::max, std::min
-#include <cstdio>      // For sprintf
-#include <string>      // For std::string, std::to_string in Render text
-#include <cfloat>      // For FLT_MAX
+#include <cmath>       
+#include <algorithm>   
+#include <cstdio>     
+#include <string>      
+#include <cfloat>      
 
-// Constructor
 BSplineTrack::BSplineTrack(bool isLoop)
     : degree(3), selectedPointIndex(-1), loop(isLoop), activeEditingCurve(CurveSide::Left), selectedCurve(CurveSide::None) {
-    // Add some default control points to form a basic loop
-    if (loop) {
-        // Initial left curve (e.g., inner part of a rectangular track, clockwise)
+    if (loop) { // desenha curvas iniciais
+        // parte interna
         controlPointsLeft.push_back(Vector2(370, 300));  
         controlPointsLeft.push_back(Vector2(670, 300));
         controlPointsLeft.push_back(Vector2(970, 480)); 
         controlPointsLeft.push_back(Vector2(260, 530)); 
 
-        // Initial right curve (e.g., outer part of a rectangular track, clockwise)
+        // parte externa
         controlPointsRight.push_back(Vector2(80, 80));   
         controlPointsRight.push_back(Vector2(1200, 80));  
         controlPointsRight.push_back(Vector2(1200, 640)); 
@@ -27,16 +25,14 @@ BSplineTrack::BSplineTrack(bool isLoop)
 
 void BSplineTrack::switchActiveEditingCurve() {
     activeEditingCurve = (activeEditingCurve == CurveSide::Left) ? CurveSide::Right : CurveSide::Left;
-    deselectControlPoint(); // Deselect to avoid confusion when switching active curve
-    printf("Active editing curve switched to: %s\n", (activeEditingCurve == CurveSide::Left ? "LEFT" : "RIGHT"));
+    deselectControlPoint(); 
 }
 
-// Add a control point to the active curve
-void BSplineTrack::addControlPoint(const Vector2& p, int index /*= -1*/) {
+// adiciona um ponto de controle na curva selecionada
+void BSplineTrack::addControlPoint(const Vector2& p, int index) {
     std::vector<Vector2>& points = (activeEditingCurve == CurveSide::Left) ? controlPointsLeft : controlPointsRight;
     if (points.size() >= MAX_CONTROL_POINTS) return;
 
-    // Sanitize index: if out of bounds or -1, prepare to add to end.
     if (index < 0 || index > (int)points.size()) {
         index = points.size(); 
     }
@@ -48,41 +44,38 @@ void BSplineTrack::addControlPoint(const Vector2& p, int index /*= -1*/) {
     }
 }
 
-// Remove a control point
-bool BSplineTrack::removeControlPoint(int index /*= -1*/) {
+// remove o ultimo ponto de controle da curva selecionada
+bool BSplineTrack::removeControlPoint(int index) {
     std::vector<Vector2>& points = (activeEditingCurve == CurveSide::Left) ? controlPointsLeft : controlPointsRight;
 
     if (points.size() <= MIN_CONTROL_POINTS_PER_CURVE) return false;
 
     int removalIdx = -1;
 
-    if (index != -1) { // Specific index provided for the active curve
+    if (index != -1) { 
         if (index >= 0 && index < (int)points.size()) {
             removalIdx = index;
         } else {
-            return false; // Invalid explicit index for active curve
+            return false; 
         }
-    } else { // No specific index, use selection on active curve or last point of active curve
+    } else { 
         if (selectedPointIndex != -1 && selectedCurve == activeEditingCurve) {
-            // A point is selected, and it's on the currently active curve
             removalIdx = selectedPointIndex;
         } else if (!points.empty()) {
-            // No selection on active curve, or no selection at all; remove last point of active curve
             removalIdx = points.size() - 1;
         } else {
-            return false; // No points in active curve to remove
+            return false; 
         }
     }
 
     if (removalIdx >= 0 && removalIdx < (int)points.size()) {
         points.erase(points.begin() + removalIdx);
 
-        // Adjust selection if the removed point was the selected one on the active curve
         if (selectedCurve == activeEditingCurve) {
             if (selectedPointIndex == removalIdx) {
                 deselectControlPoint();
-            } else if (selectedPointIndex > removalIdx && selectedPointIndex > 0) { // Check selectedPointIndex > 0 before decrementing
-                selectedPointIndex--; // Adjust index if selection was after the removed point
+            } else if (selectedPointIndex > removalIdx && selectedPointIndex > 0) { 
+                selectedPointIndex--; 
             }
         }
         return true;
@@ -90,11 +83,10 @@ bool BSplineTrack::removeControlPoint(int index /*= -1*/) {
     return false;
 }
 
-// Select a control point if mouse click is near one
+// seleciona o ponto de controle que o mouse clicou
 bool BSplineTrack::selectControlPoint(float mx, float my) {
-    deselectControlPoint(); // Clear previous selection first
+    deselectControlPoint(); 
 
-    // Check left curve
     for (size_t i = 0; i < controlPointsLeft.size(); ++i) {
         if (controlPointsLeft[i].distSq(Vector2(mx, my)) < CONTROL_POINT_SELECT_RADIUS_SQ) {
             selectedPointIndex = i;
@@ -102,7 +94,6 @@ bool BSplineTrack::selectControlPoint(float mx, float my) {
             return true;
         }
     }
-    // Check right curve
     for (size_t i = 0; i < controlPointsRight.size(); ++i) {
         if (controlPointsRight[i].distSq(Vector2(mx, my)) < CONTROL_POINT_SELECT_RADIUS_SQ) {
             selectedPointIndex = i;
@@ -113,7 +104,7 @@ bool BSplineTrack::selectControlPoint(float mx, float my) {
     return false;
 }
 
-// Move the selected control point
+// move o ponto de controle selecionado
 void BSplineTrack::moveSelectedControlPoint(float mx, float my) {
     if (selectedPointIndex == -1 || selectedCurve == CurveSide::None) return;
 
@@ -124,13 +115,13 @@ void BSplineTrack::moveSelectedControlPoint(float mx, float my) {
     }
 }
 
-// Deselect any control point
+// deseleciona o ponto de controle
 void BSplineTrack::deselectControlPoint() {
     selectedPointIndex = -1;
     selectedCurve = CurveSide::None;
 }
 
-// Calculate a point on a cubic B-Spline segment
+// calcula o ponto de controle na curva B-Spline
 Vector2 BSplineTrack::calculateBSplinePoint(float t, const Vector2& p0, const Vector2& p1, const Vector2& p2, const Vector2& p3) const {
     float t2 = t * t;
     float t3 = t2 * t;
@@ -141,10 +132,9 @@ Vector2 BSplineTrack::calculateBSplinePoint(float t, const Vector2& p0, const Ve
     return p0 * b0 + p1 * b1 + p2 * b2 + p3 * b3;
 }
 
-// Calculate tangent on a cubic B-Spline segment (not normalized)
+// calcula o vetor tangente na curva B-Spline
 Vector2 BSplineTrack::calculateBSplineTangent(float t, const Vector2& p0, const Vector2& p1, const Vector2& p2, const Vector2& p3) const {
     float t2 = t * t;
-    // Derivatives of basis functions
     float b0_prime = -0.5f * (1 - t) * (1 - t);
     float b1_prime = (1.5f * t2 - 2.0f * t);
     float b2_prime = (-1.5f * t2 + t + 0.5f);
@@ -152,19 +142,19 @@ Vector2 BSplineTrack::calculateBSplineTangent(float t, const Vector2& p0, const 
     return p0 * b0_prime + p1 * b1_prime + p2 * b2_prime + p3 * b3_prime;
 }
 
-// Internal helper to get a point on a specific list of control points for a global t (0 to 1)
+// utiliza o t (0 a 1) para calcular o ponto na curva B-Spline
 Vector2 BSplineTrack::getPointOnCurveInternal(float t_global, const std::vector<Vector2>& points_list) const {
     if (points_list.size() < MIN_CONTROL_POINTS_PER_CURVE) {
-        return points_list.empty() ? Vector2(0,0) : points_list.front(); // Fallback
+        return points_list.empty() ? Vector2(0,0) : points_list.front(); 
     }
 
     int num_control_points = points_list.size();
     int num_segments = loop ? num_control_points : num_control_points - degree;
-    if (num_segments <= 0) return points_list.front(); // Fallback
+    if (num_segments <= 0) return points_list.front(); 
 
     float t = t_global * num_segments;
     int segment_idx = static_cast<int>(floor(t));
-    segment_idx = std::max(0, std::min(segment_idx, num_segments - 1)); // Clamp to valid range
+    segment_idx = std::max(0, std::min(segment_idx, num_segments - 1)); // clamp para uma faixa válida
     float t_local = t - segment_idx;
 
     Vector2 p0, p1, p2, p3;
@@ -340,21 +330,6 @@ void BSplineTrack::Render(bool editorMode) {
     
     // Render right curve boundary (e.g., red boundary)
     renderCurve(controlPointsRight, 0.1f, 0.1f, 0.4f); // Darker red for the line itself
-
-    // Remove the old code that drew lines between curves
-    /*
-    // Draw "fill" lines between the two curves to represent the track surface
-    if (controlPointsLeft.size() >= MIN_CONTROL_POINTS_PER_CURVE && controlPointsRight.size() >= MIN_CONTROL_POINTS_PER_CURVE) {
-        CV::color(0.3f, 0.3f, 0.3f); // Color for track surface lines (grey)
-        const int fill_steps = 50; // Number of connecting lines
-        for (int i = 0; i <= fill_steps; ++i) {
-            float t_global = static_cast<float>(i) / fill_steps;
-            Vector2 pt_left = getPointOnCurve(t_global, CurveSide::Left);
-            Vector2 pt_right = getPointOnCurve(t_global, CurveSide::Right);
-            CV::line(pt_left.x, pt_left.y, pt_right.x, pt_right.y);
-        }
-    }
-    */
 
     // Draw control points if in editor mode
     if (editorMode) {

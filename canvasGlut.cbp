@@ -43,6 +43,7 @@
 		</Linker>
 		<Unit filename="src/BSplineTrack.cpp" />
 		<Unit filename="src/BSplineTrack.h" />
+		<Unit filename="src/ExplosionManager.h" />
 		<Unit filename="src/PowerUp.cpp" />
 		<Unit filename="src/PowerUp.h" />
 		<Unit filename="src/Projectile.cpp" />

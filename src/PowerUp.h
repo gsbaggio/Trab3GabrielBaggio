@@ -4,7 +4,7 @@
 #include "Vector2.h"
 #include "gl_canvas2d.h"
 #include <cmath>
-#include <vector> // Add include for std::vector
+#include <vector> 
 
 // Forward declarations
 class BSplineTrack;

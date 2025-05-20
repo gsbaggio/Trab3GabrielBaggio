@@ -4,8 +4,8 @@
 #include "Vector2.h"
 #include "gl_canvas2d.h"
 #include <cmath>
-#include <algorithm> // For std::max/std::min
-#include <vector>    // For storing enemy projectiles
+#include <algorithm> 
+#include <vector>   
 
 // Forward declaration for collision detection
 class BSplineTrack;
