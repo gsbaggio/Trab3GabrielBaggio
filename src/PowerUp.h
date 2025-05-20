@@ -6,17 +6,17 @@
 #include <cmath>
 #include <vector> 
 
-// Forward declarations
+// declarações antecipadas
 class BSplineTrack;
 class Tanque;
 class Target;
 
-// Types of power-ups
+// tipos de power-ups
 enum class PowerUpType {
     None = 0,
-    Health = 1,     // Green '+' - Heals 50% health
-    Shield = 2,     // Blue triangle - Blocks next damage
-    Laser = 3       // Blue 'X' - Destroys enemies in line
+    Health = 1,     // "+" verde - cura 50% de vida
+    Shield = 2,     // triângulo azul - bloqueia o próximo dano
+    Laser = 3       // "X" azul - destrói inimigos em linha
 };
 
 class PowerUp {
@@ -27,12 +27,12 @@ public:
     float radius;
     float animationAngle;
     
-    // Laser effect properties
+    // propriedades do efeito laser
     static bool laserActive;
     static int laserDuration;
     static Vector2 laserStart;
     static Vector2 laserEnd;
-    static const int LASER_MAX_DURATION = 45; // Laser lasts for 45 frames (3/4 second at 60fps)
+    static const int LASER_MAX_DURATION = 45; // laser dura 45 quadros (3/4 segundo a 60fps)
     
     PowerUp();
     PowerUp(const Vector2& pos, PowerUpType powerUpType);
@@ -40,18 +40,18 @@ public:
     void Update();
     void Render();
     
-    // Check if tank collects this power-up
+    // verifica se o tanque coleta este power-up
     bool CheckCollection(const Vector2& tankPos, float tankRadius);
     
-    // Get name of power-up type for UI
+    // obtém nome do tipo de power-up para a UI
     static const char* GetTypeName(PowerUpType type);
     
-    // Apply power-up effects
+    // aplica efeitos de power-up
     static void ApplyHealthEffect(Tanque* tank);
-    static bool ApplyShieldEffect(Tanque* tank); // Returns if shield was applied
-    static int ApplyLaserEffect(Tanque* tank, std::vector<Target>& targets); // Fix: Match signature with implementation
+    static bool ApplyShieldEffect(Tanque* tank); // retorna se o escudo foi aplicado
+    static int ApplyLaserEffect(Tanque* tank, std::vector<Target>& targets); // correção: corresponder assinatura com implementação
     
-    // Update and render the laser effect
+    // atualiza e renderiza o efeito do laser
     static void UpdateLaserEffect();
     static void RenderLaserEffect();
 };

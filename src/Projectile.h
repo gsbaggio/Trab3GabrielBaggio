@@ -6,17 +6,17 @@
 #include "BSplineTrack.h"
 #include <cmath>
 
-// Forward declaration
+// declaração antecipada
 class ExplosionManager;
 
 class Projectile {
 public:
     Vector2 position;
-    Vector2 previousPosition; // Store previous position for continuous collision detection
+    Vector2 previousPosition; // armazena posição anterior para detecção contínua de colisão
     Vector2 velocity;
     bool active;
-    int lifetime; // Optional: limit projectile lifetime
-    float collisionRadius; // Explicit collision radius value
+    int lifetime; // opcional: limita a vida útil do projétil
+    float collisionRadius; // valor explícito do raio de colisão
     
     Projectile();
 
@@ -26,10 +26,10 @@ public:
     
     void Render();
     
-    // Updated to accept ExplosionManager to create explosions
+    // atualizado para aceitar ExplosionManager para criar explosões
     bool CheckCollisionWithTrack(BSplineTrack* track, ExplosionManager* explosions = nullptr);
     
-    // Helper to create explosion
+    // auxiliar para criar explosão
     void CreateExplosionOnCollision(ExplosionManager* explosions);
 };
 

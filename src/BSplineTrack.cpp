@@ -154,7 +154,7 @@ Vector2 BSplineTrack::getPointOnCurveInternal(float t_global, const std::vector<
 
     float t = t_global * num_segments;
     int segment_idx = static_cast<int>(floor(t));
-    segment_idx = std::max(0, std::min(segment_idx, num_segments - 1)); // clamp para uma faixa válida
+    segment_idx = std::max(0, std::min(segment_idx, num_segments - 1)); // limita para uma faixa válida
     float t_local = t - segment_idx;
 
     Vector2 p0, p1, p2, p3;
@@ -172,10 +172,10 @@ Vector2 BSplineTrack::getPointOnCurveInternal(float t_global, const std::vector<
     return calculateBSplinePoint(t_local, p0, p1, p2, p3);
 }
 
-// Internal helper to get tangent on a specific list of control points for a global t (0 to 1)
+// função auxiliar interna para obter tangente em uma lista específica de pontos de controle para um t global (0 a 1)
 Vector2 BSplineTrack::getTangentOnCurveInternal(float t_global, const std::vector<Vector2>& points_list) const {
     if (points_list.size() < MIN_CONTROL_POINTS_PER_CURVE) {
-        return Vector2(1,0); // Default tangent
+        return Vector2(1,0); // tangente padrão
     }
     int num_control_points = points_list.size();
     int num_segments = loop ? num_control_points : num_control_points - degree;
@@ -202,27 +202,27 @@ Vector2 BSplineTrack::getTangentOnCurveInternal(float t_global, const std::vecto
 }
 
 
-// Public interface to get point on a curve
+// interface pública para obter ponto em uma curva
 Vector2 BSplineTrack::getPointOnCurve(float t_global, CurveSide side) const {
     if (side == CurveSide::Left) {
         return getPointOnCurveInternal(t_global, controlPointsLeft);
     } else if (side == CurveSide::Right) {
         return getPointOnCurveInternal(t_global, controlPointsRight);
     }
-    return Vector2(0,0); // Should not happen if side is valid
+    return Vector2(0,0); // não deve acontecer se o lado for válido
 }
 
-// Public interface to get tangent on a curve
+// interface pública para obter tangente em uma curva
 Vector2 BSplineTrack::getTangentOnCurve(float t_global, CurveSide side) const {
      if (side == CurveSide::Left) {
         return getTangentOnCurveInternal(t_global, controlPointsLeft);
     } else if (side == CurveSide::Right) {
         return getTangentOnCurveInternal(t_global, controlPointsRight);
     }
-    return Vector2(1,0); // Should not happen
+    return Vector2(1,0); // não deve acontecer
 }
 
-// Helper to render a single B-Spline curve
+// função auxiliar para renderizar uma única curva B-Spline
 void BSplineTrack::renderCurve(const std::vector<Vector2>& points, float r, float g, float b) const {
     if (points.size() < MIN_CONTROL_POINTS_PER_CURVE) return;
 
@@ -230,10 +230,10 @@ void BSplineTrack::renderCurve(const std::vector<Vector2>& points, float r, floa
     int num_render_segments = loop ? num_control_points : num_control_points - degree;
     if (num_render_segments <= 0) return;
 
-    const int steps_per_segment = 20; // Density of line segments for drawing the curve
+    const int steps_per_segment = 20; // densidade de segmentos de linha para desenhar a curva
     Vector2 last_pt;
 
-    for (int i = 0; i < num_render_segments; ++i) { // Iterate through each B-Spline segment
+    for (int i = 0; i < num_render_segments; ++i) { // itera por cada segmento B-Spline
         Vector2 cp0, cp1, cp2, cp3;
         if (loop) {
             cp0 = points[i % num_control_points];
@@ -244,11 +244,11 @@ void BSplineTrack::renderCurve(const std::vector<Vector2>& points, float r, floa
             cp0 = points[i]; cp1 = points[i+1]; cp2 = points[i+2]; cp3 = points[i+3];
         }
 
-        for (int j = 0; j <= steps_per_segment; ++j) { // Iterate t_local from 0 to 1 for this segment
+        for (int j = 0; j <= steps_per_segment; ++j) { // itera t_local de 0 a 1 para este segmento
             float t_local_in_segment = static_cast<float>(j) / steps_per_segment;
             Vector2 current_pt = calculateBSplinePoint(t_local_in_segment, cp0, cp1, cp2, cp3);
 
-            if (j > 0 || i > 0) { // Draw line if not the very first point calculated
+            if (j > 0 || i > 0) { // desenha linha se não for o primeiro ponto calculado
                 CV::color(r, g, b);
                 CV::line(last_pt.x, last_pt.y, current_pt.x, current_pt.y);
             }
@@ -263,18 +263,18 @@ void BSplineTrack::renderCurve(const std::vector<Vector2>& points, float r, floa
     }
 }
 
-// Render the track
+// renderiza a pista
 void BSplineTrack::Render(bool editorMode) {
-    // Fill the track surface with a solid color first (new code)
+    // preenche a superfície da pista com uma cor sólida primeiro (novo código)
     if (controlPointsLeft.size() >= MIN_CONTROL_POINTS_PER_CURVE && 
         controlPointsRight.size() >= MIN_CONTROL_POINTS_PER_CURVE) {
         
-        // Road/track surface color - changed to light gray (former background color)
+        // cor da superfície da estrada/pista - mudada para cinza claro (antiga cor de fundo)
         CV::color(0.5f, 0.5f, 0.5f);
         
-        const int fill_steps = 100; // More segments for smoother fill
+        const int fill_steps = 100; // mais segmentos para preenchimento mais suave
         
-        // Draw filled triangles between the curves to create a solid surface
+        // desenha triângulos preenchidos entre as curvas para criar uma superfície sólida
         for (int i = 0; i < fill_steps; ++i) {
             float t1 = static_cast<float>(i) / fill_steps;
             float t2 = static_cast<float>(i+1) / fill_steps;
@@ -284,91 +284,91 @@ void BSplineTrack::Render(bool editorMode) {
             Vector2 left2 = getPointOnCurve(t2, CurveSide::Left);
             Vector2 right2 = getPointOnCurve(t2, CurveSide::Right);
             
-            // Draw two triangles to form a quad between the curves
-            // Triangle 1: left1, right1, left2
+            // desenha dois triângulos para formar um quadrilátero entre as curvas
+            // triângulo 1: left1, right1, left2
             float vx1[3] = {left1.x, right1.x, left2.x};
             float vy1[3] = {left1.y, right1.y, left2.y};
             CV::triangleFill(vx1, vy1);
             
-            // Triangle 2: left2, right1, right2
+            // triângulo 2: left2, right1, right2
             float vx2[3] = {left2.x, right1.x, right2.x};
             float vy2[3] = {left2.y, right1.y, right2.y};
             CV::triangleFill(vx2, vy2);
         }
         
-        // Add a yellow dotted line in the center of the track
-        CV::color(1.0f, 1.0f, 0.0f); // Bright yellow
+        // adiciona uma linha pontilhada amarela no centro da pista
+        CV::color(1.0f, 1.0f, 0.0f); // amarelo brilhante
         
-        const int dash_length = 2;  // Reduced from 10 to 5 (shorter dashes)
-        const int space_length = 2; // Reduced from 10 to 5 (more frequent dashes)
+        const int dash_length = 2;  // reduzido de 10 para 5 (traços mais curtos)
+        const int space_length = 2; // reduzido de 10 para 5 (traços mais frequentes)
         
-        // Calculate and draw the centerline dashes
+        // calcula e desenha os traços da linha central
         for (int i = 0; i < fill_steps; i += (dash_length + space_length)) {
-            // For each dash
+            // para cada traço
             for (int j = i; j < i + dash_length && j < fill_steps; j++) {
                 float t1 = static_cast<float>(j) / fill_steps;
                 float t2 = static_cast<float>(j + 1) / fill_steps;
                 
-                // Get points on both curves
+                // obtém pontos em ambas as curvas
                 Vector2 left1 = getPointOnCurve(t1, CurveSide::Left);
                 Vector2 right1 = getPointOnCurve(t1, CurveSide::Right);
                 Vector2 left2 = getPointOnCurve(t2, CurveSide::Left);
                 Vector2 right2 = getPointOnCurve(t2, CurveSide::Right);
                 
-                // Calculate center points
+                // calcula pontos centrais
                 Vector2 center1((left1.x + right1.x) * 0.5f, (left1.y + right1.y) * 0.5f);
                 Vector2 center2((left2.x + right2.x) * 0.5f, (left2.y + right2.y) * 0.5f);
                 
-                // Draw line segment for this part of the dash
+                // desenha segmento de linha para esta parte do traço
                 CV::line(center1.x, center1.y, center2.x, center2.y);
             }
         }
     }
     
-    // Render left curve boundary (e.g., green boundary)
-    renderCurve(controlPointsLeft, 0.1f, 0.1f, 0.4f); // Darker green for the line itself
+    // renderiza o limite da curva à esquerda (por exemplo, limite verde)
+    renderCurve(controlPointsLeft, 0.1f, 0.1f, 0.4f); // verde mais escuro para a linha em si
     
-    // Render right curve boundary (e.g., red boundary)
-    renderCurve(controlPointsRight, 0.1f, 0.1f, 0.4f); // Darker red for the line itself
+    // renderiza o limite da curva à direita (por exemplo, limite vermelho)
+    renderCurve(controlPointsRight, 0.1f, 0.1f, 0.4f); // vermelho mais escuro para a linha em si
 
-    // Draw control points if in editor mode
+    // desenha pontos de controle se estiver no modo editor
     if (editorMode) {
         char pointLabel[10];
 
-        // Draw Left Control Points
+        // desenha pontos de controle à esquerda
         for (size_t i = 0; i < controlPointsLeft.size(); ++i) {
             bool isSelected = (selectedPointIndex == static_cast<int>(i) && selectedCurve == CurveSide::Left);
             bool isActiveEditing = (activeEditingCurve == CurveSide::Left);
 
-            if (isSelected) CV::color(1.0f, 0.65f, 0.0f); // Orange for selected
-            else if (isActiveEditing) CV::color(0.0f, 1.0f, 0.0f); // Bright Green for active editing curve
-            else CV::color(0.0f, 0.5f, 0.0f); // Darker Green for inactive
+            if (isSelected) CV::color(1.0f, 0.65f, 0.0f); // laranja para selecionado
+            else if (isActiveEditing) CV::color(0.0f, 1.0f, 0.0f); // verde brilhante para curva de edição ativa
+            else CV::color(0.0f, 0.5f, 0.0f); // verde mais escuro para inativo
             
             CV::circleFill(controlPointsLeft[i].x, controlPointsLeft[i].y, CONTROL_POINT_DRAW_RADIUS, 10);
             sprintf(pointLabel, "L%zu", i);
-            CV::color(1,1,1); // White text
+            CV::color(1,1,1); // texto branco
             CV::text(controlPointsLeft[i].x + CONTROL_POINT_DRAW_RADIUS + 3, controlPointsLeft[i].y - CONTROL_POINT_DRAW_RADIUS - 12, pointLabel);
         }
 
-        // Draw Right Control Points
+        // desenha pontos de controle à direita
         for (size_t i = 0; i < controlPointsRight.size(); ++i) {
             bool isSelected = (selectedPointIndex == static_cast<int>(i) && selectedCurve == CurveSide::Right);
             bool isActiveEditing = (activeEditingCurve == CurveSide::Right);
 
-            if (isSelected) CV::color(1.0f, 0.65f, 0.0f); // Orange for selected
-            else if (isActiveEditing) CV::color(1.0f, 0.0f, 0.0f); // Bright Red for active editing curve
-            else CV::color(0.5f, 0.0f, 0.0f); // Darker Red for inactive
+            if (isSelected) CV::color(1.0f, 0.65f, 0.0f); // laranja para selecionado
+            else if (isActiveEditing) CV::color(1.0f, 0.0f, 0.0f); // vermelho brilhante para curva de edição ativa
+            else CV::color(0.5f, 0.0f, 0.0f); // vermelho mais escuro para inativo
 
             CV::circleFill(controlPointsRight[i].x, controlPointsRight[i].y, CONTROL_POINT_DRAW_RADIUS, 10);
             sprintf(pointLabel, "R%zu", i);
-            CV::color(1,1,1); // White text
+            CV::color(1,1,1); // texto branco
             CV::text(controlPointsRight[i].x + CONTROL_POINT_DRAW_RADIUS + 3, controlPointsRight[i].y - CONTROL_POINT_DRAW_RADIUS - 12, pointLabel);
         }
         
-        // Editor mode help text
+        // texto de ajuda do modo editor
         CV::color(1,1,1);
-        std::string activeCurveStr = (activeEditingCurve == CurveSide::Left) ? "LEFT (Green)" : "RIGHT (Red)";
-        std::string selectedInfoStr = "None";
+        std::string activeCurveStr = (activeEditingCurve == CurveSide::Left) ? "LEFT (Verde)" : "RIGHT (Vermelho)";
+        std::string selectedInfoStr = "Nenhum";
         if (selectedCurve != CurveSide::None && selectedPointIndex != -1) {
             selectedInfoStr = (selectedCurve == CurveSide::Left ? "L" : "R") + std::to_string(selectedPointIndex);
         }
@@ -377,11 +377,11 @@ void BSplineTrack::Render(bool editorMode) {
         char editorHelpTextLine2[200];
         char editorHelpTextLine3[200];
         char editorHelpTextLine4[200];
-        sprintf(editorHelpTextLine1, "Modo de edicao | Curva selecionada: %s", 
+        sprintf(editorHelpTextLine1, "Modo de Edicao | Curva Selecionada: %s", 
                 activeCurveStr.c_str(), selectedInfoStr.c_str());
         sprintf(editorHelpTextLine2, "'A' = Add (adiciona ponto de controle para a curva selecionada)");
         sprintf(editorHelpTextLine3, "'D' = Delete (deleta um ponto de controle da curva)");
-        sprintf(editorHelpTextLine4, "'S' = Switch (troca entre pontos das curvas Left e Right)");
+        sprintf(editorHelpTextLine4, "'S' = Switch (troca entre pontos das curvas esquerda e direita)");
         CV::text(10, 20, editorHelpTextLine1);
         CV::text(10, 40, editorHelpTextLine2);
         CV::text(10, 60, editorHelpTextLine3);
@@ -389,7 +389,7 @@ void BSplineTrack::Render(bool editorMode) {
     }
 }
 
-// Find the closest point on the specified curve to a query point
+// encontra o ponto mais próximo na curva especificada para um ponto de consulta
 ClosestPointInfo BSplineTrack::findClosestPointOnCurve(const Vector2& queryPoint, CurveSide side) const {
     ClosestPointInfo closestInfo;
 
@@ -459,12 +459,12 @@ ClosestPointInfo BSplineTrack::findClosestPointOnCurve(const Vector2& queryPoint
     
     if (closestInfo.isValid) {
         Vector2 tangent = getTangentOnCurveInternal(closestInfo.t_global, points_list);
-        if (tangent.lengthSq() > 1e-6) { // Avoid normalizing zero vector
+        if (tangent.lengthSq() > 1e-6) { // evita normalizar vetor zero
             tangent.normalize();
             closestInfo.normal = Vector2(-tangent.y, tangent.x); 
         } else {
-            // Cannot determine normal if tangent is zero, could set to a default or mark as less reliable
-            closestInfo.normal = Vector2(0,0); // Or some other indicator
+            // não pode determinar a normal se a tangente for zero, poderia definir para um padrão ou marcar como menos confiável
+            closestInfo.normal = Vector2(0,0); // ou algum outro indicador
         }
     }
     return closestInfo;

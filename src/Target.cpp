@@ -16,57 +16,57 @@ Target::Target(const Vector2& pos, TargetType targetType)
 void Target::Update(const Vector2& tankPosition, BSplineTrack* track) {
     if (!active) return;
     
-    // Update behavior based on target type
+    // atualiza comportamento baseado no tipo de alvo
     if (type == TargetType::Shooter) {
-        // Calculate aim angle toward tank
+        // calcula ângulo de mira para o tanque
         float dx = tankPosition.x - position.x;
         float dy = tankPosition.y - position.y;
         aimAngle = atan2(dy, dx);
 
-        // Calculate distance to tank
+        // calcula distância até o tanque
         float distSq = Vector2(dx, dy).lengthSq();
 
-        // Decrease firing cooldown
+        // diminui tempo de recarga
         if (firingCooldown > 0) {
             firingCooldown--;
         }
 
-        // Fire at tank if in range and cooldown elapsed
+        // dispara no tanque se estiver no alcance e recarga concluída
         if (distSq <= shootingRadius * shootingRadius && firingCooldown <= 0) {
             if (FireAtTarget(tankPosition)) {
                 firingCooldown = firingCooldownReset;
             }
         }
 
-        // Update existing projectiles
+        // atualiza projéteis existentes
         UpdateProjectiles(track);
     }
     else if (type == TargetType::Star) {
-        // Always update the rotation angle for spinning effect
+        // sempre atualiza o ângulo de rotação para efeito giratório
         rotationAngle += rotationSpeed;
         if (rotationAngle > 2 * M_PI) {
             rotationAngle -= 2 * M_PI;
         }
         
-        // Calculate distance to tank
+        // calcula distância até o tanque
         float dx = tankPosition.x - position.x;
         float dy = tankPosition.y - position.y;
         float distSq = dx*dx + dy*dy;
         
-        // If within detection radius, start chasing
+        // se estiver dentro do raio de detecção, começa a perseguir
         if (distSq <= detectionRadius * detectionRadius) {
             isChasing = true;
             
-            // Calculate direction to tank
+            // calcula direção para o tanque
             float dist = sqrt(distSq);
             
-            // Only move if not right on top of the tank
+            // só move se não estiver bem em cima do tanque
             if (dist > 0.1f) {
-                // Normalize and scale by speed
+                // normaliza e escala pela velocidade
                 float dirX = dx / dist;
                 float dirY = dy / dist;
                 
-                // Move toward tank (slower than before)
+                // move em direção ao tanque (mais devagar que antes)
                 position.x += dirX * moveSpeed;
                 position.y += dirY * moveSpeed;
             }
@@ -82,7 +82,7 @@ void Target::Render() {
     } else if (type == TargetType::Shooter) {
         RenderShooterTarget();
         
-        // Render projectiles
+        // renderiza projéteis
         for (auto& proj : projectiles) {
             proj.Render();
         }
@@ -90,34 +90,34 @@ void Target::Render() {
         RenderStarTarget();
     }
     
-    // Draw health bar for all target types if health < maxHealth
+    // desenha barra de vida para todos os tipos de alvo se health < maxHealth
     if (health < maxHealth) {
         float healthRatio = static_cast<float>(health) / maxHealth;
         float barWidth = radius * 2.0f;
         float barHeight = 4.0f;
         float fillWidth = barWidth * healthRatio;
 
-        // Health bar background
+        // fundo da barra de vida
         CV::color(0.3f, 0.3f, 0.3f);
         CV::rectFill(position.x - radius, position.y - radius - 10,
                      position.x - radius + barWidth, position.y - radius - 10 + barHeight);
 
-        // Health bar fill
-        CV::color(1.0f - healthRatio, healthRatio, 0.0f); // Red to green
+        // preenchimento da barra de vida
+        CV::color(1.0f - healthRatio, healthRatio, 0.0f); // vermelho para verde
         CV::rectFill(position.x - radius, position.y - radius - 10,
                      position.x - radius + fillWidth, position.y - radius - 10 + barHeight);
     }
 }
 
 void Target::RenderBasicTarget() {
-    // Original circular target rendering
+    // renderização do alvo circular original
     float healthRatio = static_cast<float>(health) / maxHealth;
     CV::color(0.8f * healthRatio, 0.3f * healthRatio, 0.0f);
     CV::circleFill(position.x, position.y, radius, 15);
     CV::color(0.4f * healthRatio, 0.15f * healthRatio, 0.0f);
     CV::circle(position.x, position.y, radius, 15);
 
-    // Add a simple "X" marking
+    // adiciona uma marcação "X" simples
     CV::color(0.2f, 0.2f, 0.2f);
     CV::line(position.x - radius/1.5f, position.y - radius/1.5f,
             position.x + radius/1.5f, position.y + radius/1.5f);
@@ -126,56 +126,56 @@ void Target::RenderBasicTarget() {
 }
 
 void Target::RenderShooterTarget() {
-    // Triangle target that aims at the tank
-    float size = radius * 1.5f; // Slightly larger than basic target
+    // alvo triangular que mira no tanque
+    float size = radius * 1.5f; // um pouco maior que o alvo básico
 
-    // Calculate triangle vertices
+    // calcula vértices do triângulo
     float cosA = cos(aimAngle);
     float sinA = sin(aimAngle);
 
-    // Point 1: front point (aimed at tank)
+    // ponto 1: ponto frontal (direcionado ao tanque)
     float x1 = position.x + cosA * size;
     float y1 = position.y + sinA * size;
 
-    // Point 2 and 3: back corners (perpendicular to aim direction)
+    // pontos 2 e 3: cantos traseiros (perpendiculares à direção de mira)
     float x2 = position.x - cosA * size * 0.5f + sinA * size * 0.7f;
     float y2 = position.y - sinA * size * 0.5f - cosA * size * 0.7f;
     float x3 = position.x - cosA * size * 0.5f - sinA * size * 0.7f;
     float y3 = position.y - sinA * size * 0.5f + cosA * size * 0.7f;
 
-    // Draw the triangle
+    // desenha o triângulo
     float vx[3] = {x1, x2, x3};
     float vy[3] = {y1, y2, y3};
 
     float healthRatio = static_cast<float>(health) / maxHealth;
-    CV::color(1.0f * healthRatio, 0.9f * healthRatio, 0.0f); // Yellow
+    CV::color(1.0f * healthRatio, 0.9f * healthRatio, 0.0f); // amarelo
     CV::polygonFill(vx, vy, 3);
 
-    CV::color(0.7f * healthRatio, 0.6f * healthRatio, 0.0f); // Border
+    CV::color(0.7f * healthRatio, 0.6f * healthRatio, 0.0f); // borda
     CV::line(x1, y1, x2, y2);
     CV::line(x2, y2, x3, y3);
     CV::line(x3, y3, x1, y1);
 
-    // Draw shooting range indicator when in cooldown
+    // desenha indicador de alcance de tiro quando em recarga
     if (firingCooldown > 0) {
         float cooldownRatio = static_cast<float>(firingCooldown) / firingCooldownReset;
-        CV::color(1.0f, 0.0f, 0.0f, 0.3f); // Red with transparency
+        CV::color(1.0f, 0.0f, 0.0f, 0.3f); // vermelho com transparência
         CV::circle(position.x, position.y, shootingRadius * cooldownRatio * 0.1f, 30);
     }
 }
 
-// Render a star shape with proper geometry
+// renderiza uma forma de estrela com geometria adequada
 void Target::RenderStarTarget() {
-    // Star parameters
+    // parâmetros da estrela
     float outerRadius = radius * 1.5f;
     float innerRadius = radius * 0.6f;
-    const int numPoints = 5;  // 5-pointed star
+    const int numPoints = 5;  // estrela de 5 pontas
     
-    // We need 10 points total (5 outer points and 5 inner points)
+    // precisamos de 10 pontos no total (5 pontos externos e 5 internos)
     Vector2 points[numPoints * 2];
     float angle = rotationAngle - M_PI/2; 
     
-    // Draw points in a clockwise order, alternating between outer and inner points
+    // desenha pontos em ordem horária, alternando entre pontos externos e internos
     for (int i = 0; i < numPoints * 2; i++) {
         float r = (i % 2 == 0) ? outerRadius : innerRadius;
         
@@ -186,20 +186,20 @@ void Target::RenderStarTarget() {
     }
 
     
-    // Gray color with health tint
+    // cor cinza com tom de saúde
     float healthRatio = static_cast<float>(health) / maxHealth;
-    float shade = 0.5f + 0.3f * (1.0f - healthRatio); // Darker when damaged
+    float shade = 0.5f + 0.3f * (1.0f - healthRatio); // mais escuro quando danificado
     
-    // Draw outline
-    CV::color(shade * 0.7f, shade * 0.2f, shade * 0.2f); // Darker gray outline
+    // desenha contorno
+    CV::color(shade * 0.7f, shade * 0.2f, shade * 0.2f); // contorno cinza mais escuro
     for (int i = 0; i < numPoints * 2; i++) {
         int next = (i + 1) % (numPoints * 2);
         CV::line(points[i].x, points[i].y, points[next].x, points[next].y);
     }
     
-    // Draw indicator when chasing
+    // desenha indicador quando está perseguindo
     if (isChasing) {
-        CV::color(1.0f, 0.2f, 0.2f); // Red indicator
+        CV::color(1.0f, 0.2f, 0.2f); // indicador vermelho
         CV::circleFill(position.x, position.y, radius * 0.3f, 8);
     }
 }
@@ -217,7 +217,7 @@ bool Target::CheckCollision(const Vector2& point) {
 bool Target::CheckCollisionWithTank(const Vector2& tankPos, float tankWidth, float tankHeight, float tankAngle) {
     if (!active) return false;
 
-    // Convert tank bounds to world coordinates
+    // converte limites do tanque para coordenadas do mundo
     float halfW = tankWidth / 2.0f;
     float halfH = tankHeight / 2.0f;
     float cosB = cos(tankAngle);
@@ -234,12 +234,12 @@ bool Target::CheckCollisionWithTank(const Vector2& tankPos, float tankWidth, flo
         worldCorners[i].y = localCorners[i].x * sinB + localCorners[i].y * cosB + tankPos.y;
     }
 
-    // Check if any corner of the tank is inside the target circle
+    // verifica se qualquer canto do tanque está dentro do círculo do alvo
     for (int i = 0; i < 4; ++i) {
         if (CheckCollision(worldCorners[i])) return true;
     }
 
-    // For simplicity, we're keeping the same collision check for all target types
+    // por simplicidade, estamos mantendo a mesma verificação de colisão para todos os tipos de alvo
     return false;
 }
 
@@ -254,20 +254,20 @@ void Target::TakeDamage(int amount) {
 bool Target::FireAtTarget(const Vector2& targetPos) {
     if (!active || type != TargetType::Shooter) return false;
 
-    // Calculate shooting direction
+    // calcula direção do tiro
     Vector2 direction(targetPos.x - position.x, targetPos.y - position.y);
     if (direction.lengthSq() > 0.001f) {
         direction.normalize();
 
-        // Create bullet with appropriate velocity
-        float bulletSpeed = 2.5f; // Slightly faster for better challenge
+        // cria projétil com velocidade apropriada
+        float bulletSpeed = 2.5f; // um pouco mais rápido para melhor desafio
         Vector2 bulletVelocity = direction * bulletSpeed;
 
-        // Spawn bullet from triangle tip (front point)
+        // gera projétil a partir da ponta do triângulo (ponto frontal)
         Vector2 spawnPos = position + direction * (radius * 1.5f);
         EnemyProjectile bullet(spawnPos, bulletVelocity);
 
-        // Add to projectile list
+        // adiciona à lista de projéteis
         projectiles.push_back(bullet);
         return true;
     }
@@ -276,19 +276,19 @@ bool Target::FireAtTarget(const Vector2& targetPos) {
 }
 
 void Target::UpdateProjectiles(BSplineTrack* track) {
-    // Update each projectile
+    // atualiza cada projétil
     for (auto& proj : projectiles) {
         if (proj.active) {
             proj.Update();
 
-            // Check wall collision if track is provided
+            // verifica colisão com parede se o track for fornecido
             if (track) {
                 proj.CheckCollisionWithTrack(track);
             }
         }
     }
 
-    // Remove inactive projectiles
+    // remove projéteis inativos
     projectiles.erase(
         std::remove_if(
             projectiles.begin(),
@@ -302,28 +302,28 @@ void Target::UpdateProjectiles(BSplineTrack* track) {
 bool EnemyProjectile::CheckCollisionWithTrack(BSplineTrack* track) {
     if (!active || !track) return false;
 
-    // Get closest points on both track boundaries
+    // obtém pontos mais próximos em ambos os limites da pista
     ClosestPointInfo cpiLeft = track->findClosestPointOnCurve(position, CurveSide::Left);
     ClosestPointInfo cpiRight = track->findClosestPointOnCurve(position, CurveSide::Right);
 
-    // Check collision with left boundary
+    // verifica colisão com limite esquerdo
     if (cpiLeft.isValid) {
         Vector2 vec_proj_to_cl_point = position - cpiLeft.point;
         float projection = vec_proj_to_cl_point.x * cpiLeft.normal.x + vec_proj_to_cl_point.y * cpiLeft.normal.y;
 
-        // If projection is positive, projectile is outside the left boundary
+        // se a projeção for positiva, o projétil está fora do limite esquerdo
         if (projection > 0.0f && projection < radius) {
             active = false;
             return true;
         }
     }
 
-    // Check collision with right boundary
+    // verifica colisão com limite direito
     if (cpiRight.isValid) {
         Vector2 vec_proj_to_cr_point = position - cpiRight.point;
         float projection = vec_proj_to_cr_point.x * cpiRight.normal.x + vec_proj_to_cr_point.y * cpiRight.normal.y;
 
-        // If projection is negative, projectile is outside the right boundary
+        // se a projeção for negativa, o projétil está fora do limite direito
         if (projection < 0.0f && std::abs(projection) < radius) {
             active = false;
             return true;

@@ -96,7 +96,6 @@ Vector2 GenerateRandomPosTrack(BSplineTrack* track, const Vector2& avoidPosition
 // spawna o tanque no inicio do track
 void resetTankToTrackStart(Tanque* tanque, BSplineTrack* track) {
     if (!tanque || !track) {
-        printf("Error: Tank or Track is null in resetTankToTrackStart.\\\\n");
         return;
     }
 
@@ -273,231 +272,227 @@ void UsePowerUp(Tanque* tank, std::vector<Target>& targets) {
 //Deve-se manter essa funo com poucas linhas de codigo
 void render()
 {
-   CV::clear(0.25f, 0.25f, 0.3f);
+    CV::clear(0.25f, 0.25f, 0.3f);
 
 
-   // pra seguir o tanque a tela
-   if(!g_editorMode){
-    CV::translate(-g_tanque->position.x + screenWidth/2, -g_tanque->position.y + screenHeight/2);
-   }
+    // pra seguir o tanque a tela
+    if(!g_editorMode){
+        CV::translate(-g_tanque->position.x + screenWidth/2, -g_tanque->position.y + screenHeight/2);
+    }
 
-   // renderiza o track
-   if (g_track) {
-       g_track->Render(g_editorMode);
-   }
+    // renderiza o track
+    if (g_track) {
+        g_track->Render(g_editorMode);
+    }
 
    // renderiza power ups
-   if (!g_editorMode) {
-       g_powerUp.Update();
-       g_powerUp.Render();
+    if (!g_editorMode) {
+        g_powerUp.Update();
+        g_powerUp.Render();
 
 
-       PowerUp::UpdateLaserEffect();
-   }
+        PowerUp::UpdateLaserEffect();
+    }
 
    // renderiza os inimigos
-   if (!g_editorMode) {
-       for (auto& target : g_targets) {
-           target.Render();
-       }
-   }
+    if (!g_editorMode) {
+        for (auto& target : g_targets) {
+            target.Render();
+        }
+    }
 
-   // renderiza o efeito do laser (deve ser renderizado após os inimigos, mas antes do tanque)
-   if (!g_editorMode) {
-       PowerUp::RenderLaserEffect();
-   }
+    // renderiza o efeito do laser (deve ser renderizado após os inimigos, mas antes do tanque)
+    if (!g_editorMode) {
+        PowerUp::RenderLaserEffect();
+    }
 
-   // renderiza o tanque fora do editor
-   if (!g_editorMode && g_tanque) {
-       g_tanque->Update(static_cast<float>(mouseX + g_tanque->position.x - screenWidth/2),
-                       static_cast<float>(mouseY + g_tanque->position.y - screenHeight/2),
-                       keyA_down, keyD_down, g_track);
+    // renderiza o tanque fora do editor
+    if (!g_editorMode && g_tanque) {
+        g_tanque->Update(static_cast<float>(mouseX + g_tanque->position.x - screenWidth/2),
+                        static_cast<float>(mouseY + g_tanque->position.y - screenHeight/2),
+                        keyA_down, keyD_down, g_track);
 
-       // att os targets
-       for (auto& target : g_targets) {
-           target.Update(g_tanque->position, g_track);
-       }
+        // att os targets
+        for (auto& target : g_targets) {
+            target.Update(g_tanque->position, g_track);
+        }
 
-       // checa se ele pegou o power-up
-       if (g_powerUp.active && g_powerUp.CheckCollection(g_tanque->position, g_tanque->baseWidth/2.0f)) {
-           // armazena o tipo de power-up e desativa ele do chao
-           g_storedPowerUp = g_powerUp.type;
-           g_powerUp.active = false;
+        // checa se ele pegou o power-up
+        if (g_powerUp.active && g_powerUp.CheckCollection(g_tanque->position, g_tanque->baseWidth/2.0f)) {
+            // armazena o tipo de power-up e desativa ele do chao
+            g_storedPowerUp = g_powerUp.type;
+            g_powerUp.active = false;
 
-       }
+        }
 
-       // checa dano
-       if (!g_tanque->isInvulnerable) {
-           // a estrela deve dar muito dano, checa colisao com ela
-           for (size_t i = 0; i < g_targets.size(); i++) {
-               Target& target = g_targets[i];
-               if (target.active && target.type == TargetType::Star) {
-                   float dx = target.position.x - g_tanque->position.x;
-                   float dy = target.position.y - g_tanque->position.y;
-                   float distSq = dx*dx + dy*dy;
-                   float combinedRadius = g_tanque->baseWidth/2.0f + target.radius;
+        // checa dano
+        if (!g_tanque->isInvulnerable) {
+            // a estrela deve dar muito dano, checa colisao com ela
+            for (size_t i = 0; i < g_targets.size(); i++) {
+                Target& target = g_targets[i];
+                if (target.active && target.type == TargetType::Star) {
+                    float dx = target.position.x - g_tanque->position.x;
+                    float dy = target.position.y - g_tanque->position.y;
+                    float distSq = dx*dx + dy*dy;
+                    float combinedRadius = g_tanque->baseWidth/2.0f + target.radius;
 
-                   if (distSq < combinedRadius * combinedRadius) {
-                       // checa escudo
-                       if (g_tanque->hasShield) {
-                           g_tanque->hasShield = false; 
-                           g_tanque->isInvulnerable = true;
-                           g_tanque->isShieldInvulnerable = true; 
-                           g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;
+                    if (distSq < combinedRadius * combinedRadius) {
+                        // checa escudo
+                        if (g_tanque->hasShield) {
+                            g_tanque->hasShield = false; 
+                            g_tanque->isInvulnerable = true;
+                            g_tanque->isShieldInvulnerable = true; 
+                            g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;
+                            
+
+                            // a estrela sempre morre ao bater no tanque
+                            target.active = false;
+                        } else {
+                            // aplica o dano normal da estrela
+                            int damage = g_tanque->maxHealth / 2;
+                            g_tanque->health -= damage;
+                            if (g_tanque->health < 0) g_tanque->health = 0;
+
                            
+                            g_tanque->isInvulnerable = true;
+                            g_tanque->isShieldInvulnerable = false; 
+                            g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;
 
-                           // a estrela sempre morre ao bater no tanque
-                           target.active = false;
-                       } else {
-                           // aplica o dano normal da estrela
-                           int damage = g_tanque->maxHealth / 2;
-                           g_tanque->health -= damage;
-                           if (g_tanque->health < 0) g_tanque->health = 0;
+                            // a estrela sempre morre ao bater no tanque
+                            target.active = false;
+                        }
 
-                           
-                           g_tanque->isInvulnerable = true;
-                           g_tanque->isShieldInvulnerable = false; 
-                           g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;
+                        // a estrela morre, entao ganha pontos e aumenta o contador
+                        g_playerScore += 100;  
+                        g_destroyedTargets++;
 
-                           // a estrela sempre morre ao bater no tanque
-                           target.active = false;
-                       }
+                        // checa se todos morreram e passa o level
+                        if (g_destroyedTargets >= NUM_TARGETS) {
+                            g_gameLevel++;
+                            InitializeTargets(g_track);
+                        }
+                    }
+                }
+            }
+        }
 
-                       // a estrela morre, entao ganha pontos e aumenta o contador
-                       g_playerScore += 100;  
-                       g_destroyedTargets++;
-
-                       // checa se todos morreram e passa o level
-                       if (g_destroyedTargets >= NUM_TARGETS) {
-                           g_gameLevel++;
-                           InitializeTargets(g_track);
-                       }
-                   }
-               }
-           }
-       }
-
-       // checa projeteis no tanque
-       if (!g_tanque->isInvulnerable) {
-           for (auto& target : g_targets) {
-               if (target.active && target.type == TargetType::Shooter) {
-                   for (auto& proj : target.projectiles) { // passa por todos os projeteis dos shooters
-                       if (proj.active) {
+        // checa projeteis no tanque
+        if (!g_tanque->isInvulnerable) {
+            for (auto& target : g_targets) {
+                if (target.active && target.type == TargetType::Shooter) {
+                    for (auto& proj : target.projectiles) { // passa por todos os projeteis dos shooters
+                        if (proj.active) {
                             // checa se o projeteis colide com o tanque
-                           float dx = proj.position.x - g_tanque->position.x;
-                           float dy = proj.position.y - g_tanque->position.y;
-                           float distSq = dx*dx + dy*dy;
-                           float combinedRadius = g_tanque->baseWidth/2.0f + proj.radius;
+                            float dx = proj.position.x - g_tanque->position.x;
+                            float dy = proj.position.y - g_tanque->position.y;
+                            float distSq = dx*dx + dy*dy;
+                            float combinedRadius = g_tanque->baseWidth/2.0f + proj.radius;  
 
-                           if (distSq < combinedRadius * combinedRadius) {
+                            if (distSq < combinedRadius * combinedRadius) {
                                
-                               proj.active = false;
+                                proj.active = false;    
 
-                               // checa escudo
-                               if (g_tanque->hasShield) {
+                                // checa escudo
+                                if (g_tanque->hasShield) {
+                                    
+                                    g_tanque->hasShield = false; 
                                    
-                                   g_tanque->hasShield = false; 
-                                   
-                                   g_tanque->isInvulnerable = true;
-                                   g_tanque->isShieldInvulnerable = true; 
-                                   g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;
-                                   
-                               } else {
-                                   // sem escudo, aplica dano
-                                   int damage = g_tanque->maxHealth / 8; 
-                                   g_tanque->health -= damage;
-                                   if (g_tanque->health < 0) g_tanque->health = 0;
+                                    g_tanque->isInvulnerable = true;
+                                    g_tanque->isShieldInvulnerable = true; 
+                                    g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;                               
+                                } else {
+                                    // sem escudo, aplica dano
+                                    int damage = g_tanque->maxHealth / 8; 
+                                    g_tanque->health -= damage;
+                                    if (g_tanque->health < 0) g_tanque->health = 0;
 
                                    
-                                   g_tanque->isInvulnerable = true;
-                                   g_tanque->isShieldInvulnerable = false; 
-                                   g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;
+                                    g_tanque->isInvulnerable = true;
+                                    g_tanque->isShieldInvulnerable = false; 
+                                    g_tanque->invulnerabilityTimer = g_tanque->INVULNERABILITY_FRAMES;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
-                                   printf("Tank hit by enemy projectile! Health: %d/%d\n",
-                                          g_tanque->health, g_tanque->maxHealth);
-                               }
-                           }
-                       }
-                   }
-               }
-           }
-       }
+        // checa colisao do tanque com os alvos normais
+        int destroyedTargetIndex = g_tanque->CheckTargetCollisions(g_targets);
+        if (destroyedTargetIndex >= 0) {
+            // alvo e destruido com colisao
+            g_playerScore += 100;
+            g_destroyedTargets++;   
 
-       // checa colisao do tanque com os alvos normais
-       int destroyedTargetIndex = g_tanque->CheckTargetCollisions(g_targets);
-       if (destroyedTargetIndex >= 0) {
-           // alvo e destruido com colisao
-           g_playerScore += 100;
-           g_destroyedTargets++;
-
-           // checa se todos morreram e passa o level
-           if (g_destroyedTargets >= NUM_TARGETS) {
+            // checa se todos morreram e passa o level
+            if (g_destroyedTargets >= NUM_TARGETS) {
                
-               g_gameLevel++;
-               InitializeTargets(g_track); 
-           }
-       }
+                g_gameLevel++;
+                InitializeTargets(g_track); 
+            }
+        }
 
-       // checa projeteis do tanque contra os alvos
-       int hitTargetIndex = -1;
-       int hitProjectileIndex = -1;
-       if (g_tanque->CheckAllProjectilesAgainstTargets(g_targets, hitTargetIndex, hitProjectileIndex)) {
-           // aplica o dano ao alvo
-           if (hitTargetIndex >= 0 && hitTargetIndex < static_cast<int>(g_targets.size())) {
-               // pega a posicao do alvo e a o vetor do projetil pra explosao
-               Vector2 hitPosition = g_targets[hitTargetIndex].position;
-               Vector2 hitVelocity = Vector2(0, 0);
+        // checa projeteis do tanque contra os alvos
+        int hitTargetIndex = -1;
+        int hitProjectileIndex = -1;
+        if (g_tanque->CheckAllProjectilesAgainstTargets(g_targets, hitTargetIndex, hitProjectileIndex)) {
+            // aplica o dano ao alvo
+            if (hitTargetIndex >= 0 && hitTargetIndex < static_cast<int>(g_targets.size())) {
+                // pega a posicao do alvo e a o vetor do projetil pra explosao
+                Vector2 hitPosition = g_targets[hitTargetIndex].position;
+                Vector2 hitVelocity = Vector2(0, 0);
 
-               if (hitProjectileIndex >= 0 && hitProjectileIndex < static_cast<int>(g_tanque->projectiles.size())) {
-                   hitVelocity = g_tanque->projectiles[hitProjectileIndex].velocity;
-                   // cria a explosao na posicao do alvo
-                   g_tanque->explosions.CreateExplosion(hitPosition, hitVelocity, 25);
-               }
+                if (hitProjectileIndex >= 0 && hitProjectileIndex < static_cast<int>(g_tanque->projectiles.size())) {
+                    hitVelocity = g_tanque->projectiles[hitProjectileIndex].velocity;
+                    // cria a explosao na posicao do alvo
+                    g_tanque->explosions.CreateExplosion(hitPosition, hitVelocity, 25);
+                }
 
-               // aplica dano ao alvo
-               g_targets[hitTargetIndex].TakeDamage(1);
+                // aplica dano ao alvo
+                g_targets[hitTargetIndex].TakeDamage(1);    
 
-               // se o alvo morreu, da ponto e aumenta o contador
-               if (!g_targets[hitTargetIndex].active) {
-                   g_playerScore += 100;
-                   g_destroyedTargets++;
+                // se o alvo morreu, da ponto e aumenta o contador
+                if (!g_targets[hitTargetIndex].active) {
+                    g_playerScore += 100;
+                    g_destroyedTargets++;
 
-                   
-                   if (g_destroyedTargets >= NUM_TARGETS) {
+                    // checa se todos morreram e passa o level
+                    if (g_destroyedTargets >= NUM_TARGETS) {
                        
-                       g_gameLevel++;
-                       InitializeTargets(g_track);  
-                   }
-               }
-           }
+                        g_gameLevel++;
+                        InitializeTargets(g_track);  
+                    }
+                }
+            }
 
-           if (hitProjectileIndex >= 0 && hitProjectileIndex < static_cast<int>(g_tanque->projectiles.size())) {
-               g_tanque->projectiles[hitProjectileIndex].active = false;
-           }
-       }
+            if (hitProjectileIndex >= 0 && hitProjectileIndex < static_cast<int>(g_tanque->projectiles.size())) {
+                g_tanque->projectiles[hitProjectileIndex].active = false;
+            }
+        }
 
-       g_tanque->Render();
+        g_tanque->Render();
     } else if (g_editorMode && g_tanque) {
-       // no editar, coloca so a posicao inicial que o tanque spawnaria
-       if (g_track) {
-           Vector2 pL = g_track->getPointOnCurve(0.0f, CurveSide::Left);
-           Vector2 pR = g_track->getPointOnCurve(0.0f, CurveSide::Right);
-           g_tanque->position = (pL + pR) * 0.5f; 
+        // no editar, coloca so a posicao inicial que o tanque spawnaria
+        if (g_track) {
+            Vector2 pL = g_track->getPointOnCurve(0.0f, CurveSide::Left);
+            Vector2 pR = g_track->getPointOnCurve(0.0f, CurveSide::Right);
+            g_tanque->position = (pL + pR) * 0.5f;  
 
-           Vector2 tangentL = g_track->getTangentOnCurve(0.0f, CurveSide::Left);
-           Vector2 tangentR = g_track->getTangentOnCurve(0.0f, CurveSide::Right);
-           Vector2 avgTangent = (tangentL + tangentR) * 0.5f;
+            Vector2 tangentL = g_track->getTangentOnCurve(0.0f, CurveSide::Left);
+            Vector2 tangentR = g_track->getTangentOnCurve(0.0f, CurveSide::Right);
+            Vector2 avgTangent = (tangentL + tangentR) * 0.5f;
 
-           if (avgTangent.lengthSq() > 0.001f) { 
-               avgTangent.normalize();
-               g_tanque->baseAngle = atan2(avgTangent.y, avgTangent.x);
-           } else {
-               g_tanque->baseAngle = 0.0f; 
-           }
-           g_tanque->topAngle = g_tanque->baseAngle; 
-           g_tanque->forwardVector.set(cos(g_tanque->baseAngle), sin(g_tanque->baseAngle));
-       }
-       g_tanque->Render();
+            if (avgTangent.lengthSq() > 0.001f) { 
+                avgTangent.normalize();
+                g_tanque->baseAngle = atan2(avgTangent.y, avgTangent.x);
+            } else {
+                g_tanque->baseAngle = 0.0f; 
+            }
+            g_tanque->topAngle = g_tanque->baseAngle; 
+            g_tanque->forwardVector.set(cos(g_tanque->baseAngle), sin(g_tanque->baseAngle));
+        }
+        g_tanque->Render();
     }
 
     // textos na tela
@@ -529,52 +524,51 @@ void render()
 //funcao chamada toda vez que uma tecla for pressionada.
 void keyboard(int key)
 {
-   printf("\nTecla: %d" , key);
 
-   switch(key)
-   {
-      case 27: // esc sai do jogo
-	     exit(0);
-	  break;
+    switch(key)
+    {
+        case 27: // esc sai do jogo
+    	    exit(0);
+    	break;
 
-      case 'a':
-      case 'A':
-          if (!g_editorMode) keyA_down = true;
-          else if(g_track){
-            g_track->addControlPoint(Vector2(mouseX, mouseY));
-          }
-          break;
-      case 'd':
-      case 'D':
-          if (!g_editorMode) keyD_down = true;
-          else if (g_track){
-            g_track->removeControlPoint();
-          }
-          break;
-      case 'e':
-      case 'E':
-          g_editorMode = !g_editorMode;
-          if (!g_editorMode) {
+        case 'a':
+        case 'A':
+            if (!g_editorMode) keyA_down = true;
+            else if(g_track){
+                g_track->addControlPoint(Vector2(mouseX, mouseY));
+            }
+        break;
+        case 'd':
+        case 'D':
+            if (!g_editorMode) keyD_down = true;
+            else if (g_track){
+                g_track->removeControlPoint();
+            }
+        break;
+        case 'e':
+        case 'E':
+            g_editorMode = !g_editorMode;
+            if (!g_editorMode) {
               
-              if(g_track){
-                g_track->deselectControlPoint();
-              }
+                if(g_track){
+                    g_track->deselectControlPoint();
+                }
               
-              resetTankToTrackStart(g_tanque, g_track);
+                resetTankToTrackStart(g_tanque, g_track);
               
-              ResetGameState(g_tanque, g_track);
-          } else {
-              keyA_down = false;
-              keyD_down = false;
-          }
-          break;
+                ResetGameState(g_tanque, g_track);
+            } else {
+                keyA_down = false;
+                keyD_down = false;
+            }
+        break;
 
-      case 's': 
-      case 'S':
-          if (g_editorMode && g_track) {
-              g_track->switchActiveEditingCurve();
-          }
-          break;
+        case 's': 
+        case 'S':
+            if (g_editorMode && g_track) {
+                g_track->switchActiveEditingCurve();
+            }
+        break;
 
 
 
@@ -584,70 +578,68 @@ void keyboard(int key)
 //funcao chamada toda vez que uma tecla for liberada
 void keyboardUp(int key)
 {
-   printf("\nLiberou: %d" , key);
-   switch(key)
-   {
-      case 'a':
-      case 'A':
-          keyA_down = false;
-          break;
-      case 'd':
-      case 'D':
-          keyD_down = false;
-          break;
-   }
+    switch(key)
+    {
+        case 'a':
+        case 'A':
+            keyA_down = false;
+            break;
+        case 'd':
+        case 'D':
+            keyD_down = false;
+            break;
+    }
 }
 
 //funcao para tratamento de mouse: cliques, movimentos e arrastos
 void mouse(int button, int state, int wheel, int direction, int x, int y)
 {
-   mouseX = x; //guarda as coordenadas do mouse para utilizar em outras funcs
-   mouseY = y;
+    mouseX = x; //guarda as coordenadas do mouse para utilizar em outras funcs
+    mouseY = y;
 
-   if (g_editorMode && g_track) { // verifica os arratos dos pontos de controle
-       if (button == 0) {
-           if (state == 0) { 
-               g_mousePressed = true;
-               if (!g_track->selectControlPoint(static_cast<float>(x), static_cast<float>(y))) {
-                   
-               }
-           } else { 
-               g_mousePressed = false;
-
-           }
-       }
-   }
-   else if (!g_editorMode && g_tanque) {
-       if (button == 0 && state == 0) { // TIRO
-           bool fired = g_tanque->FireProjectile();
-       }
-       else if (button == 2 && state == 0) { // PODER
+    if (g_editorMode && g_track) { // verifica os arratos dos pontos de controle
+        if (button == 0) {
+            if (state == 0) { 
+                g_mousePressed = true;
+                if (!g_track->selectControlPoint(static_cast<float>(x), static_cast<float>(y))) {
+                    
+                }
+            } else { 
+                g_mousePressed = false;
+            }
+        }
+    }
+    else if (!g_editorMode && g_tanque) {
+        if (button == 0 && state == 0) { // TIRO
+            bool fired = g_tanque->FireProjectile();
+        }
+        else if (button == 2 && state == 0) { // PODER
             UsePowerUp(g_tanque, g_targets);
         }
-   }
+    }
 
-   if (g_editorMode && g_track && g_mousePressed && g_track->selectedPointIndex != -1) { // arrasto do ponto de controle
-       g_track->moveSelectedControlPoint(static_cast<float>(x), static_cast<float>(y));
-   }
+    if (g_editorMode && g_track && g_mousePressed && g_track->selectedPointIndex != -1) { // arrasto do ponto de controle
+        g_track->moveSelectedControlPoint(static_cast<float>(x), static_cast<float>(y));
+    }
 
 }
 
 int main(void)
 {
-   srand(static_cast<unsigned int>(time(NULL))); // randoms
+    srand(static_cast<unsigned int>(time(NULL))); // randoms
 
-   g_tanque = new Tanque(screenWidth / 4.0f, screenHeight / 2.0f, 0.7f, 0.02f);
-   g_track = new BSplineTrack(true);
+    g_tanque = new Tanque(screenWidth / 4.0f, screenHeight / 2.0f, 0.7f, 0.02f);
+    g_track = new BSplineTrack(true);
 
-   // inicializa o tanque, os targets e um power-up
-   resetTankToTrackStart(g_tanque, g_track);
+    // inicializa o tanque, os targets e um power-up
+    resetTankToTrackStart(g_tanque, g_track);
 
-   InitializeTargets(g_track);
+    InitializeTargets(g_track);
 
-   if (!g_powerUp.active) {
-       SpawnPowerUp(g_track);
-   }
+    if (!g_powerUp.active) {
+        SpawnPowerUp(g_track);
+    }
 
-   CV::init(&screenWidth, &screenHeight, "GTA VI - Tanque Edition");
-   CV::run();
+    CV::init(&screenWidth, &screenHeight, "Gabriel 'Theft' Baggio VI - Tanque Edition");
+    CV::run();
 }

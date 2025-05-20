@@ -22,7 +22,7 @@ enum class CurveSide {
 
 struct ClosestPointInfo {
     Vector2 point;
-    float t_global;     // parametro t
+    float t_global;     // parametro t (time 0 - 1, percorrendo a curva)
     float distance;     // distância do ponto de consulta ao ponto mais próximo na curva (renomeado de distanceSquared)
     Vector2 normal;     // normal da curva no ponto mais próximo
     int segmentIndex;   // indice do segmento onde o ponto mais próximo está

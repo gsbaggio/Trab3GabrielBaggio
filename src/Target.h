@@ -7,10 +7,10 @@
 #include <algorithm> 
 #include <vector>   
 
-// Forward declaration for collision detection
+// declaração antecipada para detecção de colisão
 class BSplineTrack;
 
-// Define a projectile class for enemy projectiles
+// define uma classe para projéteis inimigos
 class EnemyProjectile {
 public:
     Vector2 position;
@@ -30,20 +30,20 @@ public:
     
     void Render() {
         if (!active) return;
-        CV::color(1.0f, 0.5f, 0.0f); // Bright orange for better visibility
+        CV::color(1.0f, 0.5f, 0.0f); // laranja brilhante para melhor visibilidade
         CV::circleFill(position.x, position.y, radius, 8);
-        CV::color(1.0f, 0.2f, 0.0f); // Red outline
+        CV::color(1.0f, 0.2f, 0.0f); // contorno vermelho
         CV::circle(position.x, position.y, radius, 8);
     }
     
     bool CheckCollisionWithTrack(BSplineTrack* track);
 };
 
-// Define target types
+// define tipos de alvos
 enum class TargetType {
-    Basic = 0,    // Original stationary circular target
-    Shooter = 1,  // Triangle shooter that fires at the tank
-    Star = 2      // Star that chases the tank when in range
+    Basic = 0,    // alvo circular estacionário original
+    Shooter = 1,  // atirador triangular que dispara contra o tanque
+    Star = 2      // estrela que persegue o tanque quando está ao alcance
 };
 
 class Target {
@@ -51,23 +51,23 @@ public:
     Vector2 position;
     bool active;
     float radius;
-    int health;        // Health points
-    int maxHealth;     // Maximum health
-    TargetType type;   // Type of target
+    int health;        // pontos de vida
+    int maxHealth;     // vida máxima
+    TargetType type;   // tipo de alvo
     
-    // Shooter-specific properties
-    float aimAngle;                // Angle at which the shooter is aiming
-    float shootingRadius;          // Range within which the shooter will fire
-    int firingCooldown;            // Current cooldown timer
-    int firingCooldownReset;       // Time between shots
-    std::vector<EnemyProjectile> projectiles; // Enemy projectiles
+    // propriedades específicas do atirador
+    float aimAngle;                // ângulo em que o atirador está mirando
+    float shootingRadius;          // alcance dentro do qual o atirador dispara
+    int firingCooldown;            // temporizador de recarga atual
+    int firingCooldownReset;       // tempo entre disparos
+    std::vector<EnemyProjectile> projectiles; // projéteis inimigos
     
-    // Star-specific properties
-    float detectionRadius;    // Range within which the star starts chasing
-    float moveSpeed;          // Movement speed of the star
-    bool isChasing;           // Whether the star is currently chasing the tank
-    float rotationAngle;      // Current rotation angle of the star
-    float rotationSpeed;      // How fast the star rotates
+    // propriedades específicas da estrela
+    float detectionRadius;    // alcance dentro do qual a estrela começa a perseguir
+    float moveSpeed;          // velocidade de movimento da estrela
+    bool isChasing;           // se a estrela está perseguindo o tanque
+    float rotationAngle;      // ângulo de rotação atual da estrela
+    float rotationSpeed;      // velocidade de rotação da estrela
     
     Target();
     Target(const Vector2& pos, TargetType targetType = TargetType::Basic);

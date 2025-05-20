@@ -17,37 +17,37 @@
 class Tanque {
 public:
     Vector2 position;
-    float baseAngle; // Radians, 0 is along positive X-axis
-    float topAngle;  // Radians, 0 is along positive X-axis, relative to world
+    float baseAngle; // radianos, 0 é ao longo do eixo X positivo
+    float topAngle;  // radianos, 0 é ao longo do eixo X positivo, relativo ao mundo
     float speed;
-    float rotationRate; // Radians per frame for base rotation
-    float turretRotationSpeed; // Radians per frame for turret rotation
+    float rotationRate; // radianos por quadro para rotação da base
+    float turretRotationSpeed; // radianos por quadro para rotação da torre
 
-    Vector2 forwardVector; // Direction the base is pointing
+    Vector2 forwardVector; // direção para onde a base está apontando
 
-    // Dimensions
+    // dimensões
     float baseWidth;
     float baseHeight;
     float turretRadius;
     float cannonLength;
     float cannonWidth;
 
-    // Collision related members
+    // membros relacionados à colisão
     Vector2 lastSafePosition;
     bool isColliding;
-    int collisionTimer; // Counts down frames for rebound
+    int collisionTimer; // contagem regressiva de quadros para recuo
 
-    // Collision constants
+    // constantes de colisão
     static const int COLLISION_REBOUND_FRAMES = 90; 
     static constexpr float REBOUND_SPEED_FACTOR = 0.3f; 
 
-    // Projectile related members
+    // membros relacionados a projéteis
     int firingCooldown;
     int firingCooldownReset;
     float projectileSpeed;
     std::vector<Projectile> projectiles;
 
-    // Health related members
+    // membros relacionados à saúde
     int health;
     int maxHealth;
     bool isInvulnerable;
@@ -55,10 +55,10 @@ public:
     static const int INVULNERABILITY_FRAMES = 60; 
     bool isShieldInvulnerable; 
 
-    // Add shield property
+    // adiciona propriedade de escudo
     bool hasShield;
 
-    // Add explosion manager
+    // adiciona gerenciador de explosão
     ExplosionManager explosions;
 
     Tanque(float x, float y, float initialSpeed = 1.0f, float initialRotationRate = 0.03f);
@@ -66,18 +66,18 @@ public:
     void Update(float mouseX, float mouseY, bool rotateLeft, bool rotateRight, BSplineTrack* track);
     void Render();
     
-    // Projectile related methods
+    // métodos relacionados a projéteis
     bool FireProjectile();
     Vector2 GetCannonTipPosition() const;
     void UpdateProjectiles(BSplineTrack* track);
 
-    // Check if a projectile hits any targets and returns the index of hit target or -1
+    // verifica se um projétil atinge algum alvo e retorna o índice do alvo atingido ou -1
     int CheckProjectileTargetCollision(const Projectile& proj, std::vector<Target>& targets);
     
-    // Check all projectiles against all targets
+    // verifica todos os projéteis contra todos os alvos
     bool CheckAllProjectilesAgainstTargets(std::vector<Target>& targets, int& hitTargetIndex, int& hitProjectileIndex);
 
-    // Change the return type from void to int
+    // altera o tipo de retorno de void para int
     int CheckTargetCollisions(std::vector<Target>& targets);
 
 private:
