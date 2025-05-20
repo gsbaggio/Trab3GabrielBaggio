@@ -1,3 +1,10 @@
+/**
+ * BSplineTrack.h
+ * Define a pista baseada em curvas B-Spline onde acontece o jogo.
+ * Implementa funcionalidades para criar, editar e renderizar a pista,
+ * bem como detectar colisões com seus limites.
+ */
+
 #ifndef BSPLINETRACK_H
 #define BSPLINETRACK_H
 
@@ -76,4 +83,4 @@ private:
     Vector2 getTangentOnCurveInternal(float t_global, const std::vector<Vector2>& points_list) const;
 };
 
-#endif 
+#endif

@@ -1,3 +1,10 @@
+/**
+ * Projectile.h
+ * Define a classe para os projéteis disparados pelo tanque.
+ * Gerencia o movimento, renderização e detecção de colisão dos projéteis
+ * com a pista e com os alvos.
+ */
+
 #ifndef __PROJECTILE_H__
 #define __PROJECTILE_H__
 

@@ -1,3 +1,10 @@
+/**
+ * PowerUp.h
+ * Define os diferentes tipos de power-ups que o jogador pode coletar.
+ * Inclui funcionalidades para cura, escudo protetor e laser especial
+ * que podem ser usados para auxiliar o jogador durante o jogo.
+ */
+
 #ifndef __POWER_UP_H__
 #define __POWER_UP_H__
 

@@ -1,3 +1,10 @@
+/**
+ * Target.cpp
+ * Implementa as funcionalidades dos diferentes tipos de alvos.
+ * Cada tipo de alvo tem seu próprio comportamento de renderização, 
+ * movimento e interação com o jogador.
+ */
+
 #include "Target.h"
 #include "BSplineTrack.h"
 #include <cmath>

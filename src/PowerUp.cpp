@@ -1,3 +1,10 @@
+/**
+ * PowerUp.cpp
+ * Implementa os diferentes tipos de power-ups e seus efeitos.
+ * Gerencia a renderização visual dos power-ups, coleta pelo jogador,
+ * e a aplicação de seus efeitos especiais no jogo.
+ */
+
 #include "PowerUp.h"
 #include "Tanque.h"
 #include "Target.h"

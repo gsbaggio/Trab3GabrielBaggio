@@ -1,3 +1,10 @@
+/**
+ * main.cpp
+ * Arquivo principal que coordena todos os componentes do jogo.
+ * Gerencia inicialização, loop principal, entrada do usuário,
+ * e interação entre tanque, alvos, power-ups e pista.
+ */
+
 #include <GL/glut.h>
 #include <GL/freeglut_ext.h>
 

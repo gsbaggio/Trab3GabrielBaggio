@@ -1,3 +1,10 @@
+/**
+ * Projectile.cpp
+ * Implementa a funcionalidade dos projéteis disparados pelo tanque.
+ * Controla o movimento, detecção de colisão com a pista e criação
+ * de efeitos de explosão quando ocorrem colisões.
+ */
+
 #include "Projectile.h"
 #include "ExplosionManager.h"
 #include <cmath>

@@ -1,3 +1,10 @@
+/**
+ * Tanque.cpp
+ * Implementa todas as funcionalidades do tanque controlado pelo jogador.
+ * Inclui movimentação, rotação da torre, disparo de projéteis,
+ * verificação de colisões e interação com alvos e power-ups.
+ */
+
 #include "Tanque.h"
 #include "gl_canvas2d.h"
 #include <cmath> 

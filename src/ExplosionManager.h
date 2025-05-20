@@ -1,3 +1,10 @@
+/**
+ * ExplosionManager.h
+ * Sistema de partículas para gerenciar efeitos visuais de explosão.
+ * Controla a criação, atualização e renderização de partículas
+ * para criar efeitos realistas de explosão após colisões.
+ */
+
 #ifndef __EXPLOSION_MANAGER_H__
 #define __EXPLOSION_MANAGER_H__
 

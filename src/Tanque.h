@@ -1,3 +1,10 @@
+/**
+ * Tanque.h
+ * Define a classe principal do jogador (tanque).
+ * Gerencia movimento, rotação, disparo de projéteis, 
+ * detecção de colisão e sistemas de vida/escudo.
+ */
+
 #ifndef __TANQUE_H__
 #define __TANQUE_H__
 

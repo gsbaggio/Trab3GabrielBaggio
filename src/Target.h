@@ -1,3 +1,10 @@
+/**
+ * Target.h
+ * Define as classes relacionadas aos alvos/inimigos do jogo.
+ * Inclui diferentes tipos de alvos (básico, atirador e estrela) 
+ * e implementa projéteis inimigos com seus comportamentos específicos.
+ */
+
 #ifndef __TARGET_H__
 #define __TARGET_H__
 

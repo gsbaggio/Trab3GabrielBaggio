@@ -1,3 +1,10 @@
+/**
+ * BSplineTrack.cpp
+ * Implementa a pista do jogo usando curvas B-Spline.
+ * Fornece ferramentas para edição de pista, renderização,
+ * e cálculo de pontos e normais para detecção de colisão.
+ */
+
 #include "BSplineTrack.h"
 #include <vector>
 #include <cmath>       
@@ -10,16 +17,47 @@ BSplineTrack::BSplineTrack(bool isLoop)
     : degree(3), selectedPointIndex(-1), loop(isLoop), activeEditingCurve(CurveSide::Left), selectedCurve(CurveSide::None) {
     if (loop) { // desenha curvas iniciais
         // parte interna
-        controlPointsLeft.push_back(Vector2(370, 300));  
-        controlPointsLeft.push_back(Vector2(670, 300));
-        controlPointsLeft.push_back(Vector2(970, 480)); 
-        controlPointsLeft.push_back(Vector2(260, 530)); 
+        controlPointsLeft.push_back(Vector2(385, 372));  
+        controlPointsLeft.push_back(Vector2(413, 252));
+        controlPointsLeft.push_back(Vector2(493, 246)); 
+        controlPointsLeft.push_back(Vector2(560, 256)); 
+        controlPointsLeft.push_back(Vector2(605, 312));  
+        controlPointsLeft.push_back(Vector2(682, 415));
+        controlPointsLeft.push_back(Vector2(835, 420)); 
+        controlPointsLeft.push_back(Vector2(940, 336)); 
+        controlPointsLeft.push_back(Vector2(994, 224));  
+        controlPointsLeft.push_back(Vector2(1050, 204));
+        controlPointsLeft.push_back(Vector2(1099, 213)); 
+        controlPointsLeft.push_back(Vector2(1074, 291)); 
+        controlPointsLeft.push_back(Vector2(1113, 337));  
+        controlPointsLeft.push_back(Vector2(1070, 414));
+        controlPointsLeft.push_back(Vector2(948, 504)); 
+        controlPointsLeft.push_back(Vector2(777, 480)); 
+        controlPointsLeft.push_back(Vector2(631, 506)); 
+        controlPointsLeft.push_back(Vector2(484, 495)); 
+
+
+
 
         // parte externa
-        controlPointsRight.push_back(Vector2(80, 80));   
-        controlPointsRight.push_back(Vector2(1200, 80));  
-        controlPointsRight.push_back(Vector2(1200, 640)); 
-        controlPointsRight.push_back(Vector2(80, 640)); 
+        controlPointsRight.push_back(Vector2(236, 177));   
+        controlPointsRight.push_back(Vector2(402, 80));  
+        controlPointsRight.push_back(Vector2(567, 86)); 
+        controlPointsRight.push_back(Vector2(694, 150)); 
+        controlPointsRight.push_back(Vector2(735, 242));   
+        controlPointsRight.push_back(Vector2(840, 216));  
+        controlPointsRight.push_back(Vector2(890, 130)); 
+        controlPointsRight.push_back(Vector2(970, 49)); 
+        controlPointsRight.push_back(Vector2(1106, 44));   
+        controlPointsRight.push_back(Vector2(1232, 67));  
+        controlPointsRight.push_back(Vector2(1244, 289)); 
+        controlPointsRight.push_back(Vector2(1219, 425)); 
+        controlPointsRight.push_back(Vector2(1201, 541));   
+        controlPointsRight.push_back(Vector2(1109, 623));  
+        controlPointsRight.push_back(Vector2(849, 646)); 
+        controlPointsRight.push_back(Vector2(703, 607)); 
+        controlPointsRight.push_back(Vector2(400, 625)); 
+        controlPointsRight.push_back(Vector2(206, 451)); 
     }
 }
 
